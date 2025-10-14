@@ -1,0 +1,176 @@
+﻿@{
+    var userName = Context.Session.GetString("UserName");
+    var userRole = Context.Session.GetString("UserRole");
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Order Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            padding-top: 20px;
+        }
+
+            .sidebar .nav-link {
+                color: rgba(255,255,255,0.8);
+                padding: 12px 20px;
+                margin: 5px 10px;
+                border-radius: 8px;
+                transition: all 0.3s;
+            }
+
+                .sidebar .nav-link:hover,
+                .sidebar .nav-link.active {
+                    background: rgba(255,255,255,0.1);
+                    color: white;
+                }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .navbar-top {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px 30px;
+            margin-bottom: 30px;
+        }
+
+        .brand-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+            padding: 0 20px;
+            display: block;
+            margin-bottom: 30px;
+        }
+
+        .user-badge {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <a href="/" class="brand-logo">
+            <i class="bi bi-box-seam"></i> OrderMS
+        </a>
+
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+
+            @if (userRole == "order_creator" || userRole == "admin")
+            {
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Orders" asp-action="Create">
+                        <i class="bi bi-plus-circle"></i> Create Order
+                    </a>
+                </li>
+            }
+
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="Orders" asp-action="Index">
+                    <i class="bi bi-list-ul"></i> All Orders
+                </a>
+            </li>
+
+            @if (userRole == "admin")
+            {
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Products" asp-action="Index">
+                        <i class="bi bi-box"></i> Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Customers" asp-action="Index">
+                        <i class="bi bi-people"></i> Customers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Users" asp-action="Index">
+                        <i class="bi bi-person-badge"></i> User Management
+                    </a>
+                </li>
+            }
+        </ul>
+
+        <div class="position-absolute bottom-0 w-100 p-3">
+            <div class="text-center mb-3">
+                <div class="mb-2">
+                    <strong>@userName</strong>
+                </div>
+                <span class="user-badge">@userRole</span>
+            </div>
+            <a asp-controller="Auth" asp-action="Logout" class="btn btn-outline-light btn-sm w-100">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Navbar -->
+        <nav class="navbar-top">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">@ViewData["Title"]</h4>
+                <div>
+                    <span class="text-muted">
+                        <i class="bi bi-calendar"></i> @DateTime.Now.ToString("dddd, MMMM dd, yyyy")
+                    </span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Alerts -->
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show">
+                <i class="bi bi-check-circle"></i> @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="bi bi-exclamation-circle"></i> @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <!-- Page Content -->
+        <main>
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
