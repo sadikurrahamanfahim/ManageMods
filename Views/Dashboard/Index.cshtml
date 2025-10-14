@@ -1,0 +1,58 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-center">Welcome to Your Dashboard</h2>
+
+    <div class="row text-center">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body">
+                    <h5 class="card-title">👤 User Profile</h5>
+                    <p class="card-text text-muted">View and manage your profile details.</p>
+                    <a href="/Profile" class="btn btn-primary btn-sm">View Profile</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body">
+                    <h5 class="card-title">📊 Reports</h5>
+                    <p class="card-text text-muted">Check your recent activity and performance.</p>
+                    <a href="/Reports" class="btn btn-success btn-sm">View Reports</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body">
+                    <h5 class="card-title">⚙️ Settings</h5>
+                    <p class="card-text text-muted">Update preferences and application settings.</p>
+                    <a href="/Settings" class="btn btn-secondary btn-sm">Go to Settings</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-5">
+        <p class="text-muted">Last login: @DateTime.Now.ToString("dddd, dd MMMM yyyy hh:mm tt")</p>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 900px;
+    }
+
+    .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+</style>

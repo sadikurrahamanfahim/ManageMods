@@ -158,3 +158,4 @@ E:\dotNetProjects\ManageMods\ManageMods\obj\Debug\net8.0\refint\OrderManagementS
 E:\dotNetProjects\ManageMods\ManageMods\obj\Debug\net8.0\OrderManagementSystem.pdb
 E:\dotNetProjects\ManageMods\ManageMods\obj\Debug\net8.0\OrderManagementSystem.genruntimeconfig.cache
 E:\dotNetProjects\ManageMods\ManageMods\obj\Debug\net8.0\ref\OrderManagementSystem.dll
+E:\dotNetProjects\ManageMods\ManageMods\obj\Debug\net8.0\OrderManagementSystem.sourcelink.json

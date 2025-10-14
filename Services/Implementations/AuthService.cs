@@ -18,13 +18,18 @@ namespace OrderManagementSystem.Services.Implementations
         public async Task<User?> Login(string email, string password)
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == email && u.IsActive);
+                .FirstOrDefaultAsync(u => u.Email == email && u.IsActive);  // Temporarly Removed Hashing to check login
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+            if (user == null)
+                return null;
+
+            // Compare plain text password directly
+            if (user.PasswordHash != password)
                 return null;
 
             return user;
         }
+
 
         public async Task<bool> Register(RegisterViewModel model)
         {
