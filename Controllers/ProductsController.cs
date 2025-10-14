@@ -1,0 +1,123 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using OrderManagementSystem.Services.Interfaces;
+using OrderManagementSystem.Models.Entities;
+using OrderManagementSystem.Helpers;
+
+namespace OrderManagementSystem.Controllers
+{
+    public class ProductsController : Controller
+    {
+        private readonly IProductService _productService;
+        private readonly IFileService _fileService;
+
+        public ProductsController(IProductService productService, IFileService fileService)
+        {
+            _productService = productService;
+            _fileService = fileService;
+        }
+
+        [Authorize("admin")]
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var products = await _productService.GetAllProducts(false); // Show all including inactive
+            return View(products);
+        }
+
+        [Authorize("admin")]
+        [HttpGet]
+        public IActionResult Create()
+        {
+            return View();
+        }
+
+        [Authorize("admin")]
+        [HttpPost]
+        public async Task<IActionResult> Create(Product model, IFormFile? image)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            if (image != null && image.Length > 0)
+            {
+                model.ImageUrl = await _fileService.UploadFile(image, "products");
+            }
+
+            var result = await _productService.CreateProduct(model);
+
+            if (result)
+            {
+                TempData["Success"] = "Product created successfully!";
+                return RedirectToAction("Index");
+            }
+
+            TempData["Error"] = "Failed to create product";
+            return View(model);
+        }
+
+        [Authorize("admin")]
+        [HttpGet]
+        public async Task<IActionResult> Edit(Guid id)
+        {
+            var product = await _productService.GetProductById(id);
+            if (product == null)
+            {
+                TempData["Error"] = "Product not found";
+                return RedirectToAction("Index");
+            }
+            return View(product);
+        }
+
+        [Authorize("admin")]
+        [HttpPost]
+        public async Task<IActionResult> Edit(Product model, IFormFile? image)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            if (image != null && image.Length > 0)
+            {
+                // Delete old image if exists
+                if (!string.IsNullOrEmpty(model.ImageUrl))
+                    _fileService.DeleteFile(model.ImageUrl);
+
+                model.ImageUrl = await _fileService.UploadFile(image, "products");
+            }
+
+            var result = await _productService.UpdateProduct(model);
+
+            if (result)
+            {
+                TempData["Success"] = "Product updated successfully!";
+                return RedirectToAction("Index");
+            }
+
+            TempData["Error"] = "Failed to update product";
+            return View(model);
+        }
+
+        [Authorize("admin")]
+        [HttpPost]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var result = await _productService.DeleteProduct(id);
+
+            if (result)
+                return Json(new { success = true, message = "Product deleted successfully" });
+
+            return Json(new { success = false, message = "Failed to delete product" });
+        }
+
+        [Authorize("admin")]
+        [HttpPost]
+        public async Task<IActionResult> UpdateStock(Guid id, int quantity)
+        {
+            var result = await _productService.UpdateStock(id, quantity);
+
+            if (result)
+                return Json(new { success = true, message = "Stock updated successfully" });
+
+            return Json(new { success = false, message = "Failed to update stock" });
+        }
+    }
+}

@@ -1,58 +1,243 @@
-﻿@{
+﻿@model OrderManagementSystem.Models.ViewModels.DashboardViewModel
+@{
     ViewData["Title"] = "Dashboard";
+    var salesChartData = ViewBag.SalesChartData as List<OrderManagementSystem.Models.ViewModels.SalesChartData>;
+    var orderStatusData = ViewBag.OrderStatusData as List<OrderManagementSystem.Models.ViewModels.OrderStatusData>;
 }
 
-<div class="container mt-5">
-    <h2 class="mb-4 text-center">Welcome to Your Dashboard</h2>
-
-    <div class="row text-center">
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm border-0 rounded-3">
-                <div class="card-body">
-                    <h5 class="card-title">👤 User Profile</h5>
-                    <p class="card-text text-muted">View and manage your profile details.</p>
-                    <a href="/Profile" class="btn btn-primary btn-sm">View Profile</a>
+<div class="container-fluid">
+    <!-- Recent Orders -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-list-ul"></i> Quick Actions</h5>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm border-0 rounded-3">
                 <div class="card-body">
-                    <h5 class="card-title">📊 Reports</h5>
-                    <p class="card-text text-muted">Check your recent activity and performance.</p>
-                    <a href="/Reports" class="btn btn-success btn-sm">View Reports</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm border-0 rounded-3">
-                <div class="card-body">
-                    <h5 class="card-title">⚙️ Settings</h5>
-                    <p class="card-text text-muted">Update preferences and application settings.</p>
-                    <a href="/Settings" class="btn btn-secondary btn-sm">Go to Settings</a>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a asp-controller="Orders" asp-action="Create" class="btn btn-primary btn-lg w-100">
+                                <i class="bi bi-plus-circle"></i><br>
+                                Create Order
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a asp-controller="Orders" asp-action="Index" asp-route-status="pending" class="btn btn-warning btn-lg w-100">
+                                <i class="bi bi-clock"></i><br>
+                                Pending Orders
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a asp-controller="Orders" asp-action="Index" class="btn btn-info btn-lg w-100">
+                                <i class="bi bi-list"></i><br>
+                                All Orders
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a asp-controller="Products" asp-action="Index" class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-box"></i><br>
+                                Products
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="text-center mt-5">
-        <p class="text-muted">Last login: @DateTime.Now.ToString("dddd, dd MMMM yyyy hh:mm tt")</p>
+    <br/>
+
+    <!-- Date Range Filter -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" name="startDate" class="form-control" value="@ViewBag.StartDate" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="endDate" class="form-control" value="@ViewBag.EndDate" />
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-filter"></i> Apply Filter
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise"></i> Reset
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Total Revenue</h6>
+                            <h3 class="mb-0">৳@Model.TotalRevenue.ToString("N0")</h3>
+                        </div>
+                        <div>
+                            <i class="bi bi-currency-dollar" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Total Orders</h6>
+                            <h3 class="mb-0">@Model.TotalOrders</h3>
+                        </div>
+                        <div>
+                            <i class="bi bi-cart-check" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Average Order</h6>
+                            <h3 class="mb-0">৳@Model.AverageOrderValue.ToString("N0")</h3>
+                        </div>
+                        <div>
+                            <i class="bi bi-graph-up" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Pending Orders</h6>
+                            <h3 class="mb-0">@Model.PendingOrders</h3>
+                        </div>
+                        <div>
+                            <i class="bi bi-clock-history" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Sales Chart -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Sales Trend</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Status Chart -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Order Status</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
 </div>
 
-<style>
-    .container {
-        max-width: 900px;
-    }
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Sales Chart
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        const salesChart = new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(Json.Serialize(salesChartData?.Select(x => x.Date).ToList() ?? new List<string>())),
+                datasets: [{
+                    label: 'Revenue (৳)',
+                    data: @Html.Raw(Json.Serialize(salesChartData?.Select(x => x.Revenue).ToList() ?? new List<decimal>())),
+                    borderColor: 'rgb(102, 126, 234)',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '৳' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-    .card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-</style>
+        // Status Chart
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(Json.Serialize(orderStatusData?.Select(x => x.Status).ToList() ?? new List<string>())),
+                datasets: [{
+                    data: @Html.Raw(Json.Serialize(orderStatusData?.Select(x => x.Count).ToList() ?? new List<int>())),
+                    backgroundColor: [
+                        'rgb(255, 205, 86)',
+                        'rgb(54, 162, 235)',
+                        'rgb(255, 159, 64)',
+                        'rgb(75, 192, 192)',
+                        'rgb(255, 99, 132)',
+                        'rgb(153, 102, 255)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    </script>
+}

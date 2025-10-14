@@ -1,0 +1,177 @@
+﻿@model OrderManagementSystem.Models.ViewModels.CreateOrderViewModel
+@{
+    ViewData["Title"] = "Create Order";
+    var products = ViewBag.Products as List<OrderManagementSystem.Models.Entities.Product>;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Create New Order</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <!-- Smart Text Input -->
+                        <div class="card mb-4 border-info">
+                            <div class="card-header bg-info text-white">
+                                <i class="bi bi-magic"></i> Quick Entry (Paste Customer Message)
+                            </div>
+                            <div class="card-body">
+                                <textarea id="smartInput" class="form-control" rows="4"
+                                          placeholder="Paste customer's message here. Example:&#10;Name: John Doe&#10;Phone: 01712345678&#10;Address: Dhaka, Bangladesh&#10;Product: iPhone 15 Pro&#10;Color: Black&#10;Price: 150000"></textarea>
+                                <button type="button" id="extractBtn" class="btn btn-info mt-2">
+                                    <i class="bi bi-lightning"></i> Extract Information
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Customer Information -->
+                        <h6 class="border-bottom pb-2 mb-3">Customer Information</h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="CustomerName" class="form-label">Customer Name *</label>
+                                <input asp-for="CustomerName" class="form-control" id="customerName" />
+                                <span asp-validation-for="CustomerName" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="CustomerPhone" class="form-label">Phone Number *</label>
+                                <input asp-for="CustomerPhone" class="form-control" id="customerPhone" />
+                                <span asp-validation-for="CustomerPhone" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CustomerAddress" class="form-label">Delivery Address *</label>
+                            <textarea asp-for="CustomerAddress" class="form-control" rows="2" id="customerAddress"></textarea>
+                            <span asp-validation-for="CustomerAddress" class="text-danger"></span>
+                        </div>
+
+                        <!-- Product Information -->
+                        <h6 class="border-bottom pb-2 mb-3 mt-4">Product Information</h6>
+
+                        <div class="mb-3">
+                            <label class="form-label">Link to Product (Optional)</label>
+                            <select asp-for="ProductId" class="form-select" id="productSelect">
+                                <option value="">-- Select Product (Optional) --</option>
+                                @if (products != null)
+                                {
+                                    foreach (var product in products)
+                                    {
+                                        <option value="@product.Id"
+                                                data-name="@product.Name"
+                                                data-price="@product.SellingPrice">
+                                            @product.Name - ৳@product.SellingPrice (Stock: @product.StockQuantity)
+                                        </option>
+                                    }
+                                }
+                            </select>
+                            <small class="text-muted">Select a product to auto-fill details (optional for quick entry)</small>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label asp-for="ProductName" class="form-label">Product Name *</label>
+                                <input asp-for="ProductName" class="form-control" id="productName" />
+                                <span asp-validation-for="ProductName" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="ProductColor" class="form-label">Color/Variant</label>
+                                <input asp-for="ProductColor" class="form-control" id="productColor" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="ProductQuantity" class="form-label">Quantity *</label>
+                                <input asp-for="ProductQuantity" type="number" class="form-control" value="1" min="1" />
+                                <span asp-validation-for="ProductQuantity" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ProductPrice" class="form-label">Price (৳) *</label>
+                                <input asp-for="ProductPrice" type="number" class="form-control" step="0.01" id="productPrice" />
+                                <span asp-validation-for="ProductPrice" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Screenshot (Optional)</label>
+                            <input type="file" name="screenshot" class="form-control" accept="image/*" />
+                            <small class="text-muted">Upload product screenshot or conversation proof</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="OrderNotes" class="form-label">Order Notes (Optional)</label>
+                            <textarea asp-for="OrderNotes" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Create Order
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+
+    <script>
+        // Auto-fill from product selection
+        $('#productSelect').change(function() {
+            const selected = $(this).find(':selected');
+            if (selected.val()) {
+                $('#productName').val(selected.data('name'));
+                $('#productPrice').val(selected.data('price'));
+            }
+        });
+
+        // Smart text extraction
+        $('#extractBtn').click(function() {
+            const text = $('#smartInput').val();
+
+            // Extract name
+            const nameMatch = text.match(/name[:\s]+([^\n]+)/i);
+            if (nameMatch) $('#customerName').val(nameMatch[1].trim());
+
+            // Extract phone (Bangladesh format)
+            const phoneMatch = text.match(/phone[:\s]+(01\d{9}|\+8801\d{9}|8801\d{9})/i);
+            if (phoneMatch) $('#customerPhone').val(phoneMatch[1].trim());
+
+            // Extract address
+            const addressMatch = text.match(/address[:\s]+([^\n]+)/i);
+            if (addressMatch) $('#customerAddress').val(addressMatch[1].trim());
+
+            // Extract product
+            const productMatch = text.match(/product[:\s]+([^\n]+)/i);
+            if (productMatch) $('#productName').val(productMatch[1].trim());
+
+            // Extract color
+            const colorMatch = text.match(/colou?r[:\s]+([^\n]+)/i);
+            if (colorMatch) $('#productColor').val(colorMatch[1].trim());
+
+            // Extract price
+            const priceMatch = text.match(/price[:\s]+(\d+)/i);
+            if (priceMatch) $('#productPrice').val(priceMatch[1].trim());
+
+            // Show success message
+            if (nameMatch || phoneMatch || productMatch) {
+                alert('✅ Information extracted! Please review and adjust if needed.');
+            } else {
+                alert('❌ Could not extract information. Please enter manually.');
+            }
+        });
+    </script>
+}

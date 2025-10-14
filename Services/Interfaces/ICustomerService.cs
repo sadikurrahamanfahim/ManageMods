@@ -5,6 +5,7 @@ namespace OrderManagementSystem.Services.Interfaces
     public interface ICustomerService
     {
         Task<Customer?> GetCustomerByPhone(string phone);
+        Task<Customer?> GetCustomerById(Guid id);
         Task<List<Customer>> GetAllCustomers();
         Task<List<Order>> GetCustomerOrders(Guid customerId);
     }

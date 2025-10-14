@@ -1,0 +1,90 @@
+﻿@model List<OrderManagementSystem.Models.Entities.Customer>
+@{
+    ViewData["Title"] = "Customers";
+}
+
+<div class="container-fluid">
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-people"></i> Customers
+                <span class="badge bg-primary">@Model.Count</span>
+            </h5>
+            <div>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search customers..." style="width: 300px;" />
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="customersTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Address</th>
+                                <th>Total Orders</th>
+                                <th>First Order</th>
+                                <th>Last Order</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var customer in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@customer.Name</strong>
+                                        @if (customer.TotalOrders >= 5)
+                                        {
+                                            <span class="badge bg-warning text-dark ms-2">VIP</span>
+                                        }
+                                    </td>
+                                    <td>@customer.Phone</td>
+                                    <td>@(customer.Address ?? "N/A")</td>
+                                    <td>
+                                        <span class="badge bg-info">@customer.TotalOrders orders</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">@customer.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">@customer.UpdatedAt.ToString("MMM dd, yyyy")</small>
+                                    </td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@customer.Id" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-people" style="font-size: 4rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No customers found</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Simple table search
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            const searchValue = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#customersTable tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchValue) ? '' : 'none';
+            });
+        });
+    </script>
+}

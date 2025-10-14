@@ -1,0 +1,174 @@
+﻿@model List<OrderManagementSystem.Models.Entities.Order>
+@{
+    ViewData["Title"] = "Orders";
+    var currentStatus = ViewBag.CurrentStatus as string;
+    var searchTerm = ViewBag.SearchTerm as string;
+}
+
+<div class="container-fluid">
+    <!-- Filter Bar -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Filter by Status</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Orders</option>
+                        <option value="pending" selected="@(currentStatus == "pending")">Pending</option>
+                        <option value="delivery_submitted" selected="@(currentStatus == "delivery_submitted")">Delivery Submitted</option>
+                        <option value="out_for_delivery" selected="@(currentStatus == "out_for_delivery")">Out for Delivery</option>
+                        <option value="completed" selected="@(currentStatus == "completed")">Completed</option>
+                        <option value="cancelled" selected="@(currentStatus == "cancelled")">Cancelled</option>
+                        <option value="returned" selected="@(currentStatus == "returned")">Returned</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Search</label>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by order number, customer name, phone..." value="@searchTerm" />
+                </div>
+                <div class="col-md-3">
+                    <button onclick="applyFilters()" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-list-ul"></i> Orders
+                <span class="badge bg-primary">@Model.Count</span>
+            </h5>
+            <a asp-action="Create" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> New Order
+            </a>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var order in Model)
+                            {
+                                <tr>
+                                    <td><strong>@order.OrderNumber</strong></td>
+                                    <td>@order.CustomerName</td>
+                                    <td>@order.CustomerPhone</td>
+                                    <td>
+                                        @order.ProductName
+                                        @if (!string.IsNullOrEmpty(order.ProductColor))
+                                        {
+                                            <br>
+                                
+                                            <small class="text-muted">@order.ProductColor</small>
+                                        }
+                                    </td>
+                                    <td>@order.ProductQuantity</td>
+                                    <td>৳@order.ProductPrice.ToString("N0")</td>
+                                    <td>
+                                        @if (order.Status == "pending")
+                                        {
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        }
+                                        else if (order.Status == "delivery_submitted")
+                                        {
+                                            <span class="badge bg-info">Delivery Submitted</span>
+                                        }
+                                        else if (order.Status == "out_for_delivery")
+                                        {
+                                            <span class="badge bg-primary">Out for Delivery</span>
+                                        }
+                                        else if (order.Status == "completed")
+                                        {
+                                            <span class="badge bg-success">Completed</span>
+                                        }
+                                        else if (order.Status == "cancelled")
+                                        {
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        }
+                                        else if (order.Status == "returned")
+                                        {
+                                            <span class="badge bg-secondary">Returned</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small>@order.CreatedAt.ToString("MMM dd, yyyy")</small><br>
+                                        <small class="text-muted">@order.CreatedAt.ToString("hh:mm tt")</small>
+                                    </td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No orders found</p>
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Create First Order
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Set selected status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            var currentStatus = '@currentStatus';
+            if (currentStatus) {
+                document.getElementById('statusFilter').value = currentStatus;
+            }
+        });
+
+        function applyFilters() {
+            const status = document.getElementById('statusFilter').value;
+            const search = document.getElementById('searchInput').value;
+
+            let url = '@Url.Action("Index", "Orders")';
+            const params = new URLSearchParams();
+
+            if (status) params.append('status', status);
+            if (search) params.append('search', search);
+
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            window.location.href = url;
+        }
+
+        // Allow Enter key to search
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+    </script>
+}

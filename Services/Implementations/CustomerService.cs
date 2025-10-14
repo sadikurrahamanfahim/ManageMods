@@ -20,6 +20,13 @@ namespace OrderManagementSystem.Services.Implementations
                 .FirstOrDefaultAsync(c => c.Phone == phone);
         }
 
+        public async Task<Customer?> GetCustomerById(Guid id)
+        {
+            return await _context.Customers
+                .Include(c => c.Orders)
+                .FirstOrDefaultAsync(c => c.Id == id);
+        }
+
         public async Task<List<Customer>> GetAllCustomers()
         {
             return await _context.Customers

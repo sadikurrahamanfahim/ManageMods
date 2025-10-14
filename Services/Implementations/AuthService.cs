@@ -39,7 +39,7 @@ namespace OrderManagementSystem.Services.Implementations
             var user = new User
             {
                 Email = model.Email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                PasswordHash =model.Password,
                 FullName = model.FullName,
                 Role = model.Role,
                 IsActive = true,

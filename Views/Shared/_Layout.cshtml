@@ -1,6 +1,20 @@
 ﻿@{
     var userName = Context.Session.GetString("UserName");
     var userRole = Context.Session.GetString("UserRole");
+
+    string GetActiveClass(string controller, string action = "")
+    {
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+
+        if (string.IsNullOrEmpty(action))
+        {
+            return currentController?.Equals(controller, StringComparison.OrdinalIgnoreCase) == true ? "active" : "";
+        }
+
+        return currentController?.Equals(controller, StringComparison.OrdinalIgnoreCase) == true
+            && currentAction?.Equals(action, StringComparison.OrdinalIgnoreCase) == true ? "active" : "";
+    }
 }
 
 <!DOCTYPE html>
@@ -80,7 +94,7 @@
 
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link" asp-controller="Dashboard" asp-action="Index">
+                <a class="nav-link @GetActiveClass("Dashboard")" asp-controller="Dashboard" asp-action="Index">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
@@ -88,33 +102,39 @@
             @if (userRole == "order_creator" || userRole == "admin")
             {
                 <li class="nav-item">
-                    <a class="nav-link" asp-controller="Orders" asp-action="Create">
+                    <a class="nav-link @GetActiveClass("Orders", "Create")" asp-controller="Orders" asp-action="Create">
                         <i class="bi bi-plus-circle"></i> Create Order
                     </a>
                 </li>
             }
 
             <li class="nav-item">
-                <a class="nav-link" asp-controller="Orders" asp-action="Index">
+                <a class="nav-link @GetActiveClass("Orders")" asp-controller="Orders" asp-action="Index">
                     <i class="bi bi-list-ul"></i> All Orders
                 </a>
             </li>
 
             @if (userRole == "admin")
             {
+                <li class="nav-item mt-3">
+                    <span class="text-white-50 ps-3 small">MANAGEMENT</span>
+                </li>
+
                 <li class="nav-item">
-                    <a class="nav-link" asp-controller="Products" asp-action="Index">
+                    <a class="nav-link @GetActiveClass("Products")" asp-controller="Products" asp-action="Index">
                         <i class="bi bi-box"></i> Products
                     </a>
                 </li>
+
                 <li class="nav-item">
-                    <a class="nav-link" asp-controller="Customers" asp-action="Index">
+                    <a class="nav-link @GetActiveClass("Customers")" asp-controller="Customers" asp-action="Index">
                         <i class="bi bi-people"></i> Customers
                     </a>
                 </li>
+
                 <li class="nav-item">
-                    <a class="nav-link" asp-controller="Users" asp-action="Index">
-                        <i class="bi bi-person-badge"></i> User Management
+                    <a class="nav-link @GetActiveClass("Users")" asp-controller="Users" asp-action="Index">
+                        <i class="bi bi-person-badge"></i> Users
                     </a>
                 </li>
             }
@@ -125,7 +145,20 @@
                 <div class="mb-2">
                     <strong>@userName</strong>
                 </div>
-                <span class="user-badge">@userRole</span>
+                <span class="user-badge">
+                    @if (userRole == "admin")
+                    {
+                        <text>Administrator</text>
+                    }
+                    else if (userRole == "order_creator")
+                    {
+                        <text>Order Creator</text>
+                    }
+                    else if (userRole == "delivery_handler")
+                    {
+                        <text>Delivery Handler</text>
+                    }
+                </span>
             </div>
             <a asp-controller="Auth" asp-action="Logout" class="btn btn-outline-light btn-sm w-100">
                 <i class="bi bi-box-arrow-right"></i> Logout

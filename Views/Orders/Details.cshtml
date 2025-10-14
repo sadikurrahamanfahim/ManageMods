@@ -1,0 +1,290 @@
+﻿@model OrderManagementSystem.Models.Entities.Order
+@{
+    ViewData["Title"] = "Order Details";
+    var userRole = Context.Session.GetString("UserRole");
+    var canUpdateStatus = userRole == "admin" || userRole == "delivery_handler";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Order Information -->
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt"></i> Order #@Model.OrderNumber
+                    </h5>
+                    <div>
+                        @if (Model.Status == "pending")
+                        {
+                            <span class="badge bg-warning text-dark fs-6">Pending</span>
+                        }
+                        else if (Model.Status == "delivery_submitted")
+                        {
+                            <span class="badge bg-info fs-6">Delivery Submitted</span>
+                        }
+                        else if (Model.Status == "out_for_delivery")
+                        {
+                            <span class="badge bg-primary fs-6">Out for Delivery</span>
+                        }
+                        else if (Model.Status == "completed")
+                        {
+                            <span class="badge bg-success fs-6">Completed</span>
+                        }
+                        else if (Model.Status == "cancelled")
+                        {
+                            <span class="badge bg-danger fs-6">Cancelled</span>
+                        }
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Customer Info -->
+                    <h6 class="border-bottom pb-2 mb-3">Customer Information</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-person"></i> Name:</strong>
+                            <p>@Model.CustomerName</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="bi bi-telephone"></i> Phone:</strong>
+                            <p>@Model.CustomerPhone</p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong><i class="bi bi-geo-alt"></i> Delivery Address:</strong>
+                        <p>@Model.CustomerAddress</p>
+                    </div>
+
+                    <!-- Product Info -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Product Information</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <strong><i class="bi bi-box"></i> Product:</strong>
+                            <p>@Model.ProductName</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Color/Variant:</strong>
+                            <p>@(Model.ProductColor ?? "N/A")</p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Quantity:</strong>
+                            <p>@Model.ProductQuantity</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Unit Price:</strong>
+                            <p>৳@Model.ProductPrice.ToString("N0")</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Total:</strong>
+                            <p class="text-primary fs-5">৳@((Model.ProductPrice * Model.ProductQuantity).ToString("N0"))</p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.OrderNotes))
+                    {
+                        <div class="mb-3">
+                            <strong><i class="bi bi-sticky"></i> Notes:</strong>
+                            <p class="text-muted">@Model.OrderNotes</p>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.ScreenshotUrl))
+                    {
+                        <div class="mb-3">
+                            <strong><i class="bi bi-image"></i> Screenshot:</strong><br>
+                            <img src="@Model.ScreenshotUrl" alt="Order Screenshot" class="img-thumbnail mt-2" style="max-width: 300px;" />
+                        </div>
+                    }
+
+                    <!-- Delivery Info -->
+                    @if (!string.IsNullOrEmpty(Model.DeliveryTrackingNumber))
+                    {
+                        <h6 class="border-bottom pb-2 mb-3 mt-4">Delivery Information</h6>
+                        <div class="mb-3">
+                            <strong><i class="bi bi-truck"></i> Tracking Number:</strong>
+                            <p>@Model.DeliveryTrackingNumber</p>
+                        </div>
+                    }
+
+                    <!-- Copy for Delivery Partner -->
+                    <div class="mt-4">
+                        <button class="btn btn-outline-secondary" onclick="copyOrderDetails()">
+                            <i class="bi bi-clipboard"></i> Copy Order Details
+                        </button>
+                    </div>
+
+                    <textarea id="orderDetailsCopy" style="position: absolute; left: -9999px;">
+Order #: @Model.OrderNumber
+Customer: @Model.CustomerName
+Phone: @Model.CustomerPhone
+Address: @Model.CustomerAddress
+Product: @Model.ProductName @(Model.ProductColor != null ? "- " + Model.ProductColor : "")
+Quantity: @Model.ProductQuantity
+Total: ৳@((Model.ProductPrice * Model.ProductQuantity).ToString("N0"))
+                    </textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Update Panel -->
+        <div class="col-md-4">
+            @if (canUpdateStatus)
+            {
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="bi bi-arrow-repeat"></i> Update Status</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">New Status</label>
+                            <select id="newStatus" class="form-select">
+                                @if (Model.Status == "pending")
+                                {
+                                    <option value="delivery_submitted">Delivery Submitted</option>
+                                    <option value="cancelled">Cancel Order</option>
+                                }
+                                @if (Model.Status == "delivery_submitted")
+                                {
+                                    <option value="out_for_delivery">Out for Delivery</option>
+                                    <option value="cancelled">Cancel Order</option>
+                                }
+                                @if (Model.Status == "out_for_delivery")
+                                {
+                                    <option value="completed">Mark as Completed</option>
+                                    <option value="returned">Mark as Returned</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Tracking Number (Optional)</label>
+                            <input type="text" id="trackingNumber" class="form-control" value="@Model.DeliveryTrackingNumber" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Comment (Optional)</label>
+                            <textarea id="statusComment" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <button onclick="updateStatus()" class="btn btn-primary w-100">
+                            <i class="bi bi-check-circle"></i> Update Status
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <!-- Order Timeline -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-clock-history"></i> Order Timeline</h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.OrderHistories != null && Model.OrderHistories.Any())
+                    {
+                        <div class="timeline">
+                            @foreach (var history in Model.OrderHistories.OrderByDescending(h => h.CreatedAt))
+                            {
+                                <div class="mb-3">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="bi bi-circle-fill text-primary" style="font-size: 0.5rem;"></i>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <strong>@history.NewStatus.Replace("_", " ")</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                @history.ChangedByUser?.FullName
+                                                <br>
+                                                @history.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")
+                                            </small>
+                                            @if (!string.IsNullOrEmpty(history.Comment))
+                                            {
+                                                <p class="mb-0 mt-1"><em>@history.Comment</em></p>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No history available</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Order Meta -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <small class="text-muted">
+                        <strong>Created:</strong> @Model.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")<br>
+                        <strong>Created By:</strong> @Model.Creator?.FullName<br>
+                        @if (Model.ProcessedBy != null)
+                        {
+                            <strong>Processed By:</strong> 
+                            @Model.Processor?.FullName
+                        
+                            <br>
+                        }
+                        @if (Model.CompletedAt != null)
+                        {
+                            <strong>Completed:</strong> 
+                            @Model.CompletedAt.Value.ToString("MMM dd, yyyy hh:mm tt")
+                        }
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Orders
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyOrderDetails() {
+            const textarea = document.getElementById('orderDetailsCopy');
+            textarea.select();
+            document.execCommand('copy');
+            alert('✅ Order details copied to clipboard!');
+        }
+
+        function updateStatus() {
+            const orderId = '@Model.Id';
+            const newStatus = document.getElementById('newStatus').value;
+            const trackingNumber = document.getElementById('trackingNumber').value;
+            const comment = document.getElementById('statusComment').value;
+
+            if (confirm(`Are you sure you want to update status to "${newStatus.replace('_', ' ')}"?`)) {
+                $.ajax({
+                    url: '@Url.Action("UpdateStatus", "Orders")',
+                    type: 'POST',
+                    data: {
+                        id: orderId,
+                        status: newStatus,
+                        trackingNumber: trackingNumber,
+                        comment: comment
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert('✅ ' + response.message);
+                            location.reload();
+                        } else {
+                            alert('❌ ' + response.message);
+                        }
+                    },
+                    error: function() {
+                        alert('❌ An error occurred. Please try again.');
+                    }
+                });
+            }
+        }
+    </script>
+}
