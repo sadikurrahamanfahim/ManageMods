@@ -174,7 +174,7 @@
                 <h4 class="mb-0">@ViewData["Title"]</h4>
                 <div>
                     <span class="text-muted">
-                        <i class="bi bi-calendar"></i> @DateTime.Now.ToString("dddd, MMMM dd, yyyy")
+                        <i class="bi bi-calendar"></i> @DateTime.UtcNow.AddHours(6).ToString("dddd, MMMM dd, yyyy")
                     </span>
                 </div>
             </div>

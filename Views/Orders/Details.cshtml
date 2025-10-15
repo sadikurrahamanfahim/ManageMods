@@ -197,7 +197,7 @@ Total: ৳@((Model.ProductPrice * Model.ProductQuantity).ToString("N0"))
                                             <small class="text-muted">
                                                 @history.ChangedByUser?.FullName
                                                 <br>
-                                                @history.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")
+                                                @history.CreatedAt.ToLocalTimeString("MMM dd, yyyy hh:mm tt")
                                             </small>
                                             @if (!string.IsNullOrEmpty(history.Comment))
                                             {
@@ -220,7 +220,7 @@ Total: ৳@((Model.ProductPrice * Model.ProductQuantity).ToString("N0"))
             <div class="card shadow-sm mt-4">
                 <div class="card-body">
                     <small class="text-muted">
-                        <strong>Created:</strong> @Model.CreatedAt.ToString("MMM dd, yyyy hh:mm tt")<br>
+                        <strong>Created:</strong> @Model.CreatedAt.ToLocalTimeString("MMM dd, yyyy hh:mm tt")<br>
                         <strong>Created By:</strong> @Model.Creator?.FullName<br>
                         @if (Model.ProcessedBy != null)
                         {
@@ -231,8 +231,8 @@ Total: ৳@((Model.ProductPrice * Model.ProductQuantity).ToString("N0"))
                         }
                         @if (Model.CompletedAt != null)
                         {
-                            <strong>Completed:</strong> 
-                            @Model.CompletedAt.Value.ToString("MMM dd, yyyy hh:mm tt")
+                            <strong>Completed:</strong>
+                        @Model.CompletedAt.Value.ToLocalTimeString("MMM dd, yyyy hh:mm tt")
                         }
                     </small>
                 </div>

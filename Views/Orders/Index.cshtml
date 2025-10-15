@@ -109,8 +109,8 @@
                                         }
                                     </td>
                                     <td>
-                                        <small>@order.CreatedAt.ToString("MMM dd, yyyy")</small><br>
-                                        <small class="text-muted">@order.CreatedAt.ToString("hh:mm tt")</small>
+                                        <small>@order.CreatedAt.ToLocalTimeString("MMM dd, yyyy")</small><br>
+                                        <small class="text-muted">@order.CreatedAt.ToLocalTimeString("hh:mm tt")</small>
                                     </td>
                                     <td>
                                         <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-outline-primary">
