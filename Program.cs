@@ -26,7 +26,10 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
-builder.Services.AddScoped<IFileService, FileService>();
+
+// ✅ ADD THESE TWO LINES - Keep both file services for flexibility
+builder.Services.AddScoped<IFileService, FileService>(); // Local storage (for development)
+builder.Services.AddSingleton<ISupabaseStorageService, SupabaseStorageService>(); // Supabase (for production)
 
 // Configure HttpContext Accessor
 builder.Services.AddHttpContextAccessor();

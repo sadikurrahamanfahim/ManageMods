@@ -9,16 +9,19 @@ namespace OrderManagementSystem.Controllers
     {
         private readonly IOrderService _orderService;
         private readonly IProductService _productService;
-        private readonly IFileService _fileService;
+        private readonly ISupabaseStorageService _supabaseStorage; // Changed from IFileService
+        private readonly IConfiguration _configuration;
 
         public OrdersController(
             IOrderService orderService,
             IProductService productService,
-            IFileService fileService)
+            ISupabaseStorageService supabaseStorage, // Changed
+            IConfiguration configuration)
         {
             _orderService = orderService;
             _productService = productService;
-            _fileService = fileService;
+            _supabaseStorage = supabaseStorage;
+            _configuration = configuration;
         }
 
         [Authorize]
@@ -53,10 +56,17 @@ namespace OrderManagementSystem.Controllers
                 return View(model);
             }
 
-            // Upload screenshot if provided
+            // Upload screenshot to Supabase if provided
             if (screenshot != null && screenshot.Length > 0)
             {
-                model.ScreenshotUrl = await _fileService.UploadFile(screenshot, "orders");
+                var bucket = _configuration["Supabase:StorageBucket:Orders"];
+                var filePath = await _supabaseStorage.UploadFile(screenshot, bucket, "screenshots");
+
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    // Get public URL
+                    model.ScreenshotUrl = _supabaseStorage.GetPublicUrl(bucket, filePath);
+                }
             }
 
             var userId = Guid.Parse(HttpContext.Session.GetString("UserId")!);
