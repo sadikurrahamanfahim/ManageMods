@@ -47,7 +47,7 @@ namespace OrderManagementSystem.Controllers
 
         [Authorize("admin", "order_creator")]
         [HttpPost]
-        public async Task<IActionResult> Create(CreateOrderViewModel model, IFormFile? screenshot)
+        public async Task<IActionResult> Create(CreateOrderViewModel model, List<IFormFile>? screenshots)
         {
             if (!ModelState.IsValid)
             {
@@ -56,17 +56,30 @@ namespace OrderManagementSystem.Controllers
                 return View(model);
             }
 
-            // Upload screenshot to Supabase if provided
-            if (screenshot != null && screenshot.Length > 0)
+            // Upload multiple screenshots to Supabase if provided
+            var screenshotUrlList = new List<string>();
+            if (screenshots != null && screenshots.Any())
             {
                 var bucket = _configuration["Supabase:StorageBucket:Orders"];
-                var filePath = await _supabaseStorage.UploadFile(screenshot, bucket, "screenshots");
 
-                if (!string.IsNullOrEmpty(filePath))
+                foreach (var screenshot in screenshots)
                 {
-                    // Get public URL
-                    model.ScreenshotUrl = _supabaseStorage.GetPublicUrl(bucket, filePath);
+                    if (screenshot != null && screenshot.Length > 0)
+                    {
+                        var filePath = await _supabaseStorage.UploadFile(screenshot, bucket, "screenshots");
+
+                        if (!string.IsNullOrEmpty(filePath))
+                        {
+                            var publicUrl = _supabaseStorage.GetPublicUrl(bucket, filePath);
+                            screenshotUrlList.Add(publicUrl);
+                        }
+                    }
                 }
+            }
+
+            if (screenshotUrlList.Any())
+            {
+                model.ScreenshotUrls = System.Text.Json.JsonSerializer.Serialize(screenshotUrlList);
             }
 
             var userId = Guid.Parse(HttpContext.Session.GetString("UserId")!);
@@ -126,6 +139,27 @@ namespace OrderManagementSystem.Controllers
             }
 
             return Json(new { success = false, message = "Failed to update status" });
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> SearchProducts(string term)
+        {
+            var products = await _productService.GetAllProducts();
+
+            var results = products
+                .Where(p => p.Name.Contains(term, StringComparison.OrdinalIgnoreCase))
+                .Take(10)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    price = p.SellingPrice,
+                    stock = p.StockQuantity,
+                    variants = p.Variants
+                });
+
+            return Json(results);
         }
     }
 }

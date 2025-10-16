@@ -29,7 +29,10 @@ namespace OrderManagementSystem.Models.Entities
         public decimal SellingPrice { get; set; }
 
         [Column("image_url")]
-        public string? ImageUrl { get; set; }
+        public string? ImageUrl { get; set; } // Keep for backward compatibility
+
+        [Column("image_urls")]
+        public string? ImageUrls { get; set; } // JSON array of multiple images
 
         [Column("is_active")]
         public bool IsActive { get; set; } = true;
@@ -39,5 +42,29 @@ namespace OrderManagementSystem.Models.Entities
 
         // Navigation properties
         public ICollection<Order> Orders { get; set; } = new List<Order>();
+
+        [NotMapped] // This property won't be stored in database
+        public List<string> Images
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(ImageUrls))
+                {
+                    return System.Text.Json.JsonSerializer.Deserialize<List<string>>(ImageUrls) ?? new List<string>();
+                }
+
+                // Fallback to single image for backward compatibility
+                if (!string.IsNullOrEmpty(ImageUrl))
+                {
+                    return new List<string> { ImageUrl };
+                }
+
+                return new List<string>();
+            }
+            set
+            {
+                ImageUrls = System.Text.Json.JsonSerializer.Serialize(value);
+            }
+        }
     }
 }

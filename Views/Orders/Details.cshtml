@@ -56,31 +56,71 @@
                     </div>
 
                     <!-- Product Info -->
+                    <!-- Product Info -->
                     <h6 class="border-bottom pb-2 mb-3 mt-4">Product Information</h6>
-                    <div class="row mb-3">
-                        <div class="col-md-8">
-                            <strong><i class="bi bi-box"></i> Product:</strong>
-                            <p>@Model.ProductName</p>
+
+                    @if (Model.Items != null && Model.Items.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Color/Variant</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.Items)
+                                    {
+                                        <tr>
+                                            <td>@item.ProductName</td>
+                                            <td>@(item.ProductColor ?? "-")</td>
+                                            <td>@item.Quantity</td>
+                                            <td>৳@item.Price.ToString("N0")</td>
+                                            <td>৳@((item.Price * item.Quantity).ToString("N0"))</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                                        <td><strong class="text-primary">৳@Model.TotalAmount.ToString("N0")</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
-                        <div class="col-md-4">
-                            <strong>Color/Variant:</strong>
-                            <p>@(Model.ProductColor ?? "N/A")</p>
+                    }
+                    else
+                    {
+                        <!-- Single product fallback -->
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <strong><i class="bi bi-box"></i> Product:</strong>
+                                <p>@Model.ProductName</p>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Color/Variant:</strong>
+                                <p>@(Model.ProductColor ?? "N/A")</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <strong>Quantity:</strong>
-                            <p>@Model.ProductQuantity</p>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <strong>Quantity:</strong>
+                                <p>@Model.ProductQuantity</p>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Unit Price:</strong>
+                                <p>৳@Model.ProductPrice.ToString("N0")</p>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Total:</strong>
+                                <p class="text-primary fs-5">৳@((Model.ProductPrice * Model.ProductQuantity).ToString("N0"))</p>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <strong>Unit Price:</strong>
-                            <p>৳@Model.ProductPrice.ToString("N0")</p>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Total:</strong>
-                            <p class="text-primary fs-5">৳@((Model.ProductPrice * Model.ProductQuantity).ToString("N0"))</p>
-                        </div>
-                    </div>
+                    }
 
                     @if (!string.IsNullOrEmpty(Model.OrderNotes))
                     {
@@ -90,11 +130,28 @@
                         </div>
                     }
 
-                    @if (!string.IsNullOrEmpty(Model.ScreenshotUrl))
+                    <!-- Multiple Screenshots -->
+                    @if (Model.Screenshots != null && Model.Screenshots.Any())
+                    {
+                        <div class="mb-3">
+                            <strong><i class="bi bi-images"></i> Screenshots:</strong><br>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                @foreach (var screenshot in Model.Screenshots)
+                                {
+                                    <a href="@screenshot" target="_blank">
+                                        <img src="@screenshot" alt="Order Screenshot" class="img-thumbnail" style="width: 150px; height: 150px; object-fit: cover;" />
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(Model.ScreenshotUrl))
                     {
                         <div class="mb-3">
                             <strong><i class="bi bi-image"></i> Screenshot:</strong><br>
-                            <img src="@Model.ScreenshotUrl" alt="Order Screenshot" class="img-thumbnail mt-2" style="max-width: 300px;" />
+                            <a href="@Model.ScreenshotUrl" target="_blank">
+                                <img src="@Model.ScreenshotUrl" alt="Order Screenshot" class="img-thumbnail mt-2" style="max-width: 300px;" />
+                            </a>
                         </div>
                     }
 

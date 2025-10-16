@@ -56,7 +56,8 @@ namespace OrderManagementSystem.Services.Implementations
             var product = await _context.Products.FindAsync(id);
             if (product == null) return false;
 
-            product.IsActive = false;
+            // Permanently delete instead of just marking inactive
+            _context.Products.Remove(product);
             return await _context.SaveChangesAsync() > 0;
         }
     }

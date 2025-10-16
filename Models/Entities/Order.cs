@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using OrderManagementSystem.Models.ViewModels;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OrderManagementSystem.Models.Entities
@@ -102,5 +103,68 @@ namespace OrderManagementSystem.Models.Entities
         public User? Processor { get; set; }
 
         public ICollection<OrderHistory> OrderHistories { get; set; } = new List<OrderHistory>();
+
+        [Column("order_items")]
+        public string? OrderItems { get; set; } // JSON array of order items
+
+        [NotMapped]
+        public List<OrderItemViewModel> Items
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(OrderItems))
+                {
+                    return System.Text.Json.JsonSerializer.Deserialize<List<OrderItemViewModel>>(OrderItems)
+                        ?? new List<OrderItemViewModel>();
+                }
+                return new List<OrderItemViewModel>();
+            }
+            set
+            {
+                OrderItems = System.Text.Json.JsonSerializer.Serialize(value);
+            }
+        }
+
+        [Column("screenshot_urls")]
+        public string? ScreenshotUrls { get; set; } // JSON array of multiple screenshots
+
+        [NotMapped]
+        public List<string> Screenshots
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(ScreenshotUrls))
+                {
+                    return System.Text.Json.JsonSerializer.Deserialize<List<string>>(ScreenshotUrls)
+                        ?? new List<string>();
+                }
+
+                // Fallback to single screenshot for backward compatibility
+                if (!string.IsNullOrEmpty(ScreenshotUrl))
+                {
+                    return new List<string> { ScreenshotUrl };
+                }
+
+                return new List<string>();
+            }
+            set
+            {
+                ScreenshotUrls = System.Text.Json.JsonSerializer.Serialize(value);
+            }
+        }
+
+        // Add computed property for total
+        [NotMapped]
+        public decimal TotalAmount
+        {
+            get
+            {
+                if (Items != null && Items.Any())
+                {
+                    return Items.Sum(i => i.Price * i.Quantity);
+                }
+                return ProductPrice * ProductQuantity;
+            }
+        }
     }
 }

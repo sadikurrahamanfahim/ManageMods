@@ -39,6 +39,52 @@ namespace OrderManagementSystem.Services.Implementations
             customer.TotalOrders++;
             customer.UpdatedAt = DateTime.UtcNow;
 
+            // Parse order items
+            List<OrderItemViewModel> orderItems = null;
+            if (!string.IsNullOrEmpty(model.OrderItemsJson))
+            {
+                orderItems = System.Text.Json.JsonSerializer.Deserialize<List<OrderItemViewModel>>(model.OrderItemsJson);
+            }
+
+            // Calculate totals
+            decimal totalPrice = 0;
+            string productSummary = "";
+
+            if (orderItems != null && orderItems.Any())
+            {
+                totalPrice = orderItems.Sum(i => i.Price * i.Quantity);
+                productSummary = string.Join(", ", orderItems.Select(i => $"{i.ProductName} x{i.Quantity}"));
+
+                // Update stock for each product
+                foreach (var item in orderItems)
+                {
+                    if (item.ProductId.HasValue)
+                    {
+                        var product = await _context.Products.FindAsync(item.ProductId.Value);
+                        if (product != null && product.StockQuantity >= item.Quantity)
+                        {
+                            product.StockQuantity -= item.Quantity;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Single product (backward compatibility)
+                totalPrice = model.ProductPrice * model.ProductQuantity;
+                productSummary = model.ProductName;
+
+                // Update stock for single product
+                if (model.ProductId.HasValue)
+                {
+                    var product = await _context.Products.FindAsync(model.ProductId.Value);
+                    if (product != null && product.StockQuantity >= model.ProductQuantity)
+                    {
+                        product.StockQuantity -= model.ProductQuantity;
+                    }
+                }
+            }
+
             var order = new Order
             {
                 OrderNumber = await GenerateOrderNumber(),
@@ -47,11 +93,15 @@ namespace OrderManagementSystem.Services.Implementations
                 CustomerPhone = model.CustomerPhone,
                 CustomerAddress = model.CustomerAddress,
                 ProductId = model.ProductId,
-                ProductName = model.ProductName,
+                ProductName = productSummary,
                 ProductColor = model.ProductColor,
-                ProductQuantity = model.ProductQuantity,
-                ProductPrice = model.ProductPrice,
-                ScreenshotUrl = model.ScreenshotUrl,
+                ProductQuantity = orderItems?.Sum(i => i.Quantity) ?? model.ProductQuantity,
+                ProductPrice = totalPrice,
+                OrderItems = model.OrderItemsJson,
+                ScreenshotUrls = model.ScreenshotUrls,
+                ScreenshotUrl = !string.IsNullOrEmpty(model.ScreenshotUrls)
+                    ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(model.ScreenshotUrls)?.FirstOrDefault()
+                    : null,
                 OrderNotes = model.OrderNotes,
                 CreatedBy = createdBy,
                 Status = "pending",
@@ -106,7 +156,7 @@ namespace OrderManagementSystem.Services.Implementations
                 );
             }
 
-            return await query.OrderByDescending(o => o.CreatedAt).ToListAsync();
+            return await query.OrderBy(o => o.CreatedAt).ToListAsync();
         }
 
         public async Task<bool> UpdateOrderStatus(Guid orderId, string newStatus, Guid userId, string? comment = null)

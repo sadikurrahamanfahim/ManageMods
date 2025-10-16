@@ -38,20 +38,36 @@ namespace OrderManagementSystem.Controllers
 
         [Authorize("admin")]
         [HttpPost]
-        public async Task<IActionResult> Create(Product model, IFormFile? image)
+        public async Task<IActionResult> Create(Product model, List<IFormFile>? images)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            if (image != null && image.Length > 0)
+            var imageUrlList = new List<string>();
+
+            if (images != null && images.Any())
             {
                 var bucket = _configuration["Supabase:StorageBucket:Products"];
-                var filePath = await _supabaseStorage.UploadFile(image, bucket, "images");
 
-                if (!string.IsNullOrEmpty(filePath))
+                foreach (var image in images)
                 {
-                    model.ImageUrl = _supabaseStorage.GetPublicUrl(bucket, filePath);
+                    if (image != null && image.Length > 0)
+                    {
+                        var filePath = await _supabaseStorage.UploadFile(image, bucket, "images");
+
+                        if (!string.IsNullOrEmpty(filePath))
+                        {
+                            var publicUrl = _supabaseStorage.GetPublicUrl(bucket, filePath);
+                            imageUrlList.Add(publicUrl);
+                        }
+                    }
                 }
+            }
+
+            if (imageUrlList.Any())
+            {
+                model.Images = imageUrlList;
+                model.ImageUrl = imageUrlList.First(); // Set first image as main image for backward compatibility
             }
 
             var result = await _productService.CreateProduct(model);
@@ -81,31 +97,43 @@ namespace OrderManagementSystem.Controllers
 
         [Authorize("admin")]
         [HttpPost]
-        public async Task<IActionResult> Edit(Product model, IFormFile? image)
+        public async Task<IActionResult> Edit(Product model, List<IFormFile>? images, string? existingImages)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            if (image != null && image.Length > 0)
+            var imageUrlList = new List<string>();
+
+            // Keep existing images if provided
+            if (!string.IsNullOrEmpty(existingImages))
+            {
+                imageUrlList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(existingImages) ?? new List<string>();
+            }
+
+            // Add new images
+            if (images != null && images.Any())
             {
                 var bucket = _configuration["Supabase:StorageBucket:Products"];
 
-                // Delete old image if exists
-                if (!string.IsNullOrEmpty(model.ImageUrl))
+                foreach (var image in images)
                 {
-                    // Extract file path from URL
-                    var uri = new Uri(model.ImageUrl);
-                    var segments = uri.Segments;
-                    var filePath = segments[segments.Length - 1];
-                    await _supabaseStorage.DeleteFile(bucket, $"images/{filePath}");
-                }
+                    if (image != null && image.Length > 0)
+                    {
+                        var filePath = await _supabaseStorage.UploadFile(image, bucket, "images");
 
-                // Upload new image
-                var newFilePath = await _supabaseStorage.UploadFile(image, bucket, "images");
-                if (!string.IsNullOrEmpty(newFilePath))
-                {
-                    model.ImageUrl = _supabaseStorage.GetPublicUrl(bucket, newFilePath);
+                        if (!string.IsNullOrEmpty(filePath))
+                        {
+                            var publicUrl = _supabaseStorage.GetPublicUrl(bucket, filePath);
+                            imageUrlList.Add(publicUrl);
+                        }
+                    }
                 }
+            }
+
+            if (imageUrlList.Any())
+            {
+                model.Images = imageUrlList;
+                model.ImageUrl = imageUrlList.First();
             }
 
             var result = await _productService.UpdateProduct(model);
@@ -124,10 +152,42 @@ namespace OrderManagementSystem.Controllers
         [HttpPost]
         public async Task<IActionResult> Delete(Guid id)
         {
+            var product = await _productService.GetProductById(id);
+
+            if (product == null)
+                return Json(new { success = false, message = "Product not found" });
+
+            // Delete product image from Supabase if exists
+            if (!string.IsNullOrEmpty(product.ImageUrl))
+            {
+                try
+                {
+                    var bucket = _configuration["Supabase:StorageBucket:Products"];
+                    var uri = new Uri(product.ImageUrl);
+                    var segments = uri.Segments;
+
+                    // Extract the file path (images/filename.jpg)
+                    if (segments.Length >= 2)
+                    {
+                        var folder = segments[segments.Length - 2].TrimEnd('/');
+                        var fileName = segments[segments.Length - 1];
+                        var filePath = $"{folder}/{fileName}";
+
+                        await _supabaseStorage.DeleteFile(bucket, filePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting image: {ex.Message}");
+                    // Continue with product deletion even if image delete fails
+                }
+            }
+
+            // Permanently delete from database
             var result = await _productService.DeleteProduct(id);
 
             if (result)
-                return Json(new { success = true, message = "Product deleted successfully" });
+                return Json(new { success = true, message = "Product and images deleted successfully" });
 
             return Json(new { success = false, message = "Failed to delete product" });
         }
@@ -142,6 +202,55 @@ namespace OrderManagementSystem.Controllers
                 return Json(new { success = true, message = "Stock updated successfully" });
 
             return Json(new { success = false, message = "Failed to update stock" });
+        }
+
+        // Add endpoint to delete individual image
+        [Authorize("admin")]
+        [HttpPost]
+        public async Task<IActionResult> DeleteProductImage(Guid productId, string imageUrl)
+        {
+            var product = await _productService.GetProductById(productId);
+
+            if (product == null)
+                return Json(new { success = false, message = "Product not found" });
+
+            var images = product.Images;
+            images.Remove(imageUrl);
+
+            // Delete from Supabase
+            try
+            {
+                var bucket = _configuration["Supabase:StorageBucket:Products"];
+                var uri = new Uri(imageUrl);
+                var segments = uri.Segments;
+
+                if (segments.Length >= 2)
+                {
+                    var folder = segments[segments.Length - 2].TrimEnd('/');
+                    var fileName = segments[segments.Length - 1];
+                    var filePath = $"{folder}/{fileName}";
+
+                    await _supabaseStorage.DeleteFile(bucket, filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting image: {ex.Message}");
+            }
+
+            product.Images = images;
+            if (images.Any())
+            {
+                product.ImageUrl = images.First();
+            }
+            else
+            {
+                product.ImageUrl = null;
+            }
+
+            await _productService.UpdateProduct(product);
+
+            return Json(new { success = true, message = "Image deleted successfully" });
         }
     }
 }

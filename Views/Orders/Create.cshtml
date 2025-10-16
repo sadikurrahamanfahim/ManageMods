@@ -6,14 +6,17 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-8 mx-auto">
+        <div class="col-md-10 mx-auto">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Create New Order</h5>
                 </div>
                 <div class="card-body">
-                    <form asp-action="Create" method="post" enctype="multipart/form-data">
+                    <form asp-action="Create" method="post" enctype="multipart/form-data" id="orderForm">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <!-- Hidden field for order items JSON -->
+                        <input type="hidden" name="OrderItemsJson" id="orderItemsJson" />
 
                         <!-- Smart Text Input -->
                         <div class="card mb-4 border-info">
@@ -52,56 +55,138 @@
                         </div>
 
                         <!-- Product Information -->
-                        <h6 class="border-bottom pb-2 mb-3 mt-4">Product Information</h6>
+                        <h6 class="border-bottom pb-2 mb-3 mt-4">
+                            Product Information
+                        </h6>
 
+                        <!-- Product Selection Card -->
+                        <div class="card mb-3 border-primary" id="productSelectionCard">
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <label class="form-label">
+                                        Select Product or Type Manually *
+                                        <span class="badge bg-info">Optional: Link to Inventory</span>
+                                    </label>
+
+                                    <!-- First Row: Dropdown + Search -->
+                                    <div class="col-md-12">
+                                        <div class="row g-2">
+                                            <!-- g-2 adds spacing between columns -->
+                                            <!-- Dropdown -->
+                                            <div class="col-md-6">
+                                                <select id="productDropdown" class="form-select">
+                                                    <option value="">-- Select from list --</option>
+                                                    @if (products != null)
+                                                    {
+                                                        foreach (var product in products.OrderBy(p => p.Name))
+                                                        {
+                                                            <option value="@product.Id"
+                                                                    data-name="@product.Name"
+                                                                    data-price="@product.SellingPrice"
+                                                                    data-stock="@product.StockQuantity"
+                                                                    data-variants="@product.Variants">
+                                                                @product.Name - ৳@product.SellingPrice.ToString("N0") (Stock: @product.StockQuantity)
+                                                            </option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+
+                                            <!-- Search -->
+                                            <div class="col-md-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                                    <input type="text" id="productSearch" class="form-control" placeholder="Search products..." />
+                                                </div>
+                                                <div id="searchResults" class="list-group mt-2"
+                                                     style="display: none; max-height: 250px; overflow-y: auto; position: absolute; z-index: 1000; width: calc(100% - 30px);">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Second Row: Product Name + Color -->
+                                    <div class="col-md-12 mt-3">
+                                        <div class="row g-2">
+                                            <!-- Product Name -->
+                                            <div class="col-md-6">
+                                                <label class="form-label">Product Name *</label>
+                                                <input type="text" id="selectedProductName" class="form-control" placeholder="Enter product name manually" />
+                                                <input type="hidden" id="selectedProductId" />
+                                                <input type="hidden" id="maxStock" value="999999" />
+                                                <small class="text-muted" id="stockInfo" style="display: none;">
+                                                    Available: <span id="availableStock" class="badge bg-success">0</span>
+                                                </small>
+                                            </div>
+
+                                            <!-- Color / Variant -->
+                                            <div class="col-md-6">
+                                                <label class="form-label">Color/Variant</label>
+                                                <input type="text" id="selectedProductColor" class="form-control" placeholder="Optional" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Quantity *</label>
+                                        <input type="number" id="selectedProductQty" class="form-control" value="1" min="1" />
+                                        <small class="text-danger" id="qtyError" style="display: none;">Exceeds stock!</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Price (৳) *</label>
+                                        <input type="number" id="selectedProductPrice" class="form-control" step="0.01" placeholder="0.00" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">&nbsp;</label>
+                                        <button type="button" class="btn btn-primary w-100" id="addToCartBtn">
+                                            <i class="bi bi-cart-plus"></i> Add to Order
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Items Table -->
+                        <div class="card mb-3" id="orderItemsCard" style="display: none;">
+                            <div class="card-header bg-light">
+                                <strong>Order Items</strong>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm mb-0" id="orderItemsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Color/Variant</th>
+                                            <th>Quantity</th>
+                                            <th>Price</th>
+                                            <th>Subtotal</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orderItemsBody">
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                                            <td><strong id="orderTotal">৳0</strong></td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Multiple Screenshots Upload -->
                         <div class="mb-3">
-                            <label class="form-label">Link to Product (Optional)</label>
-                            <select asp-for="ProductId" class="form-select" id="productSelect">
-                                <option value="">-- Select Product (Optional) --</option>
-                                @if (products != null)
-                                {
-                                    foreach (var product in products)
-                                    {
-                                        <option value="@product.Id"
-                                                data-name="@product.Name"
-                                                data-price="@product.SellingPrice">
-                                            @product.Name - ৳@product.SellingPrice (Stock: @product.StockQuantity)
-                                        </option>
-                                    }
-                                }
-                            </select>
-                            <small class="text-muted">Select a product to auto-fill details (optional for quick entry)</small>
-                        </div>
+                            <label class="form-label">Screenshots (Optional)</label>
+                            <input type="file" name="screenshots" class="form-control" accept="image/*" multiple id="screenshotInput" />
+                            <small class="text-muted">You can upload multiple screenshots</small>
 
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <label asp-for="ProductName" class="form-label">Product Name *</label>
-                                <input asp-for="ProductName" class="form-control" id="productName" />
-                                <span asp-validation-for="ProductName" class="text-danger"></span>
-                            </div>
-                            <div class="col-md-4">
-                                <label asp-for="ProductColor" class="form-label">Color/Variant</label>
-                                <input asp-for="ProductColor" class="form-control" id="productColor" />
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label asp-for="ProductQuantity" class="form-label">Quantity *</label>
-                                <input asp-for="ProductQuantity" type="number" class="form-control" value="1" min="1" />
-                                <span asp-validation-for="ProductQuantity" class="text-danger"></span>
-                            </div>
-                            <div class="col-md-6">
-                                <label asp-for="ProductPrice" class="form-label">Price (৳) *</label>
-                                <input asp-for="ProductPrice" type="number" class="form-control" step="0.01" id="productPrice" />
-                                <span asp-validation-for="ProductPrice" class="text-danger"></span>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Screenshot (Optional)</label>
-                            <input type="file" name="screenshot" class="form-control" accept="image/*" />
-                            <small class="text-muted">Upload product screenshot or conversation proof</small>
+                            <!-- Screenshot Preview -->
+                            <div id="screenshotPreview" class="mt-3 d-flex flex-wrap gap-2"></div>
                         </div>
 
                         <div class="mb-3">
@@ -110,7 +195,7 @@
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
                                 <i class="bi bi-check-circle"></i> Create Order
                             </button>
                             <a asp-action="Index" class="btn btn-outline-secondary">
@@ -129,12 +214,263 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
 
     <script>
-        // Auto-fill from product selection
-        $('#productSelect').change(function() {
+        let orderItems = [];
+
+        // Dropdown selection
+        $('#productDropdown').change(function() {
             const selected = $(this).find(':selected');
+
             if (selected.val()) {
-                $('#productName').val(selected.data('name'));
-                $('#productPrice').val(selected.data('price'));
+                const productId = selected.val();
+                const productName = selected.data('name');
+                const price = selected.data('price');
+                const stock = selected.data('stock');
+                const variants = selected.data('variants');
+
+                selectProduct(productId, productName, price, stock, variants);
+            } else {
+                clearProductSelection();
+            }
+        });
+
+        // Product search with debounce
+        let searchTimeout;
+        $('#productSearch').on('input', function() {
+            clearTimeout(searchTimeout);
+            const term = $(this).val();
+
+            if (term.length < 2) {
+                $('#searchResults').hide();
+                return;
+            }
+
+            searchTimeout = setTimeout(function() {
+                $.ajax({
+                    url: '@Url.Action("SearchProducts", "Orders")',
+                    data: { term: term },
+                    success: function(products) {
+                        if (products.length > 0) {
+                            let html = '';
+                            products.forEach(function(product) {
+                                const stockClass = product.stock > 5 ? 'success' : (product.stock > 0 ? 'warning' : 'danger');
+                                html += `
+                                    <button type="button" class="list-group-item list-group-item-action"
+                                            onclick="selectProductFromSearch('${product.id}', '${product.name}', ${product.price}, ${product.stock}, '${product.variants || ''}')">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <strong>${product.name}</strong>
+                                                ${product.variants ? '<br><small class="text-muted">' + product.variants + '</small>' : ''}
+                                            </div>
+                                            <div class="text-end">
+                                                <strong>৳${product.price.toLocaleString()}</strong><br>
+                                                <small class="badge bg-${stockClass}">Stock: ${product.stock}</small>
+                                            </div>
+                                        </div>
+                                    </button>
+                                `;
+                            });
+                            $('#searchResults').html(html).show();
+                        } else {
+                            $('#searchResults').html('<div class="list-group-item text-muted">No products found</div>').show();
+                        }
+                    }
+                });
+            }, 300);
+        });
+
+        // Select product from search (global function)
+        window.selectProductFromSearch = function(id, name, price, stock, variants) {
+            selectProduct(id, name, price, stock, variants);
+            $('#productSearch').val('');
+            $('#searchResults').hide();
+        };
+
+        // Common select product function
+        function selectProduct(id, name, price, stock, variants) {
+            $('#selectedProductId').val(id);
+            $('#selectedProductName').val(name);
+            $('#selectedProductPrice').val(price);
+            $('#maxStock').val(stock);
+            $('#availableStock').text(stock);
+            $('#stockInfo').show();
+
+            // Set variant if available
+            if (variants) {
+                const variantArray = variants.split(',');
+                if (variantArray.length > 0) {
+                    $('#selectedProductColor').val(variantArray[0].trim());
+                }
+            }
+
+            // Validate quantity
+            validateQuantity();
+
+            // Show warning if out of stock
+            if (stock < 1) {
+                $('#stockInfo').removeClass('text-muted').addClass('text-danger');
+                $('#availableStock').removeClass('bg-success').addClass('bg-danger');
+                alert('⚠️ Warning: This product is out of stock!');
+            } else {
+                $('#stockInfo').removeClass('text-danger').addClass('text-muted');
+                $('#availableStock').removeClass('bg-danger').addClass('bg-success');
+            }
+        }
+
+        // Clear product selection
+        function clearProductSelection() {
+            $('#selectedProductId').val('');
+            $('#selectedProductName').val('');
+            $('#selectedProductColor').val('');
+            $('#selectedProductQty').val(1);
+            $('#selectedProductPrice').val('');
+            $('#maxStock').val(999999);
+            $('#stockInfo').hide();
+            $('#qtyError').hide();
+        }
+
+        // Validate quantity against stock
+        $('#selectedProductQty').on('input', function() {
+            validateQuantity();
+        });
+
+        function validateQuantity() {
+            const qty = parseInt($('#selectedProductQty').val()) || 0;
+            const maxStock = parseInt($('#maxStock').val()) || 999999;
+            const productId = $('#selectedProductId').val();
+
+            // Only validate if product is selected from inventory
+            if (productId && qty > maxStock) {
+                $('#qtyError').show();
+                $('#addToCartBtn').prop('disabled', true);
+                return false;
+            } else {
+                $('#qtyError').hide();
+                $('#addToCartBtn').prop('disabled', false);
+                return true;
+            }
+        }
+
+        // Hide search results when clicking outside
+        $(document).click(function(e) {
+            if (!$(e.target).closest('#productSearch, #searchResults').length) {
+                $('#searchResults').hide();
+            }
+        });
+
+        // Add product to order
+        $('#addToCartBtn').click(function() {
+            const productId = $('#selectedProductId').val();
+            const productName = $('#selectedProductName').val().trim();
+            const productColor = $('#selectedProductColor').val();
+            const quantity = parseInt($('#selectedProductQty').val());
+            const price = parseFloat($('#selectedProductPrice').val());
+
+            if (!productName || !price || quantity < 1) {
+                alert('⚠️ Please fill in Product Name, Quantity, and Price');
+                return;
+            }
+
+            // Validate quantity if product is from inventory
+            if (productId && !validateQuantity()) {
+                alert('⚠️ Quantity exceeds available stock!');
+                return;
+            }
+
+            const item = {
+                ProductId: productId || null,
+                ProductName: productName,
+                ProductColor: productColor || null,
+                Quantity: quantity,
+                Price: price
+            };
+
+            orderItems.push(item);
+            updateOrderItemsTable();
+
+            // Clear form
+            clearProductSelection();
+            $('#productDropdown').val('');
+        });
+
+        // Update order items table
+        function updateOrderItemsTable() {
+            let html = '';
+            let total = 0;
+
+            orderItems.forEach(function(item, index) {
+                const subtotal = item.Price * item.Quantity;
+                total += subtotal;
+
+                html += `
+                    <tr>
+                        <td>
+                            ${item.ProductName}
+                            ${item.ProductId ? '<span class="badge bg-success ms-2">Linked</span>' : '<span class="badge bg-secondary ms-2">Manual</span>'}
+                        </td>
+                        <td>${item.ProductColor || '-'}</td>
+                        <td>${item.Quantity}</td>
+                        <td>৳${item.Price.toLocaleString('en-BD', {minimumFractionDigits: 2})}</td>
+                        <td><strong>৳${subtotal.toLocaleString('en-BD', {minimumFractionDigits: 2})}</strong></td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(${index})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            $('#orderItemsBody').html(html);
+            $('#orderTotal').text('৳' + total.toLocaleString('en-BD', {minimumFractionDigits: 2}));
+            $('#orderItemsCard').show();
+
+            // Update hidden field
+            $('#orderItemsJson').val(JSON.stringify(orderItems));
+        }
+
+        // Remove item from order
+        window.removeItem = function(index) {
+            if (confirm('Remove this item from order?')) {
+                orderItems.splice(index, 1);
+                updateOrderItemsTable();
+
+                if (orderItems.length === 0) {
+                    $('#orderItemsCard').hide();
+                    $('#orderItemsJson').val('');
+                }
+            }
+        };
+
+        // Screenshot preview
+        document.getElementById('screenshotInput').addEventListener('change', function(e) {
+            const preview = document.getElementById('screenshotPreview');
+            preview.innerHTML = '';
+
+            const files = e.target.files;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'position-relative';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" class="img-thumbnail" style="width: 120px; height: 120px; object-fit: cover;">
+                        <span class="badge bg-primary position-absolute top-0 start-0 m-1">${i + 1}</span>
+                    `;
+                    preview.appendChild(div);
+                };
+
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form validation
+        $('#orderForm').submit(function(e) {
+            if (orderItems.length === 0) {
+                e.preventDefault();
+                alert('⚠️ Please add at least one product to the order');
+                return false;
             }
         });
 
@@ -146,7 +482,7 @@
             const nameMatch = text.match(/name[:\s]+([^\n]+)/i);
             if (nameMatch) $('#customerName').val(nameMatch[1].trim());
 
-            // Extract phone (Bangladesh format)
+            // Extract phone
             const phoneMatch = text.match(/phone[:\s]+(01\d{9}|\+8801\d{9}|8801\d{9})/i);
             if (phoneMatch) $('#customerPhone').val(phoneMatch[1].trim());
 
@@ -154,21 +490,8 @@
             const addressMatch = text.match(/address[:\s]+([^\n]+)/i);
             if (addressMatch) $('#customerAddress').val(addressMatch[1].trim());
 
-            // Extract product
-            const productMatch = text.match(/product[:\s]+([^\n]+)/i);
-            if (productMatch) $('#productName').val(productMatch[1].trim());
-
-            // Extract color
-            const colorMatch = text.match(/colou?r[:\s]+([^\n]+)/i);
-            if (colorMatch) $('#productColor').val(colorMatch[1].trim());
-
-            // Extract price
-            const priceMatch = text.match(/price[:\s]+(\d+)/i);
-            if (priceMatch) $('#productPrice').val(priceMatch[1].trim());
-
-            // Show success message
-            if (nameMatch || phoneMatch || productMatch) {
-                alert('✅ Information extracted! Please review and adjust if needed.');
+            if (nameMatch || phoneMatch || addressMatch) {
+                alert('✅ Customer information extracted!');
             } else {
                 alert('❌ Could not extract information. Please enter manually.');
             }

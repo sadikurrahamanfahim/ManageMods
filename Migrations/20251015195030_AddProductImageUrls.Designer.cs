@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OrderManagementSystem.Data;
@@ -11,9 +12,11 @@ using OrderManagementSystem.Data;
 namespace OrderManagementSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251015195030_AddProductImageUrls")]
+    partial class AddProductImageUrls
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -123,10 +126,6 @@ namespace OrderManagementSystem.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("delivery_tracking_number");
 
-                    b.Property<string>("OrderItems")
-                        .HasColumnType("text")
-                        .HasColumnName("order_items");
-
                     b.Property<string>("OrderNotes")
                         .HasColumnType("text")
                         .HasColumnName("order_notes");
@@ -167,10 +166,6 @@ namespace OrderManagementSystem.Migrations
                     b.Property<string>("ScreenshotUrl")
                         .HasColumnType("text")
                         .HasColumnName("screenshot_url");
-
-                    b.Property<string>("ScreenshotUrls")
-                        .HasColumnType("text")
-                        .HasColumnName("screenshot_urls");
 
                     b.Property<string>("Status")
                         .IsRequired()
