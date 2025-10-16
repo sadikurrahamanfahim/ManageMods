@@ -474,27 +474,193 @@
             }
         });
 
-        // Smart text extraction
+
+
+        // Smart text extraction - Enhanced version
         $('#extractBtn').click(function() {
-            const text = $('#smartInput').val();
+            const text = $('#smartInput').val().trim();
 
-            // Extract name
-            const nameMatch = text.match(/name[:\s]+([^\n]+)/i);
-            if (nameMatch) $('#customerName').val(nameMatch[1].trim());
-
-            // Extract phone
-            const phoneMatch = text.match(/phone[:\s]+(01\d{9}|\+8801\d{9}|8801\d{9})/i);
-            if (phoneMatch) $('#customerPhone').val(phoneMatch[1].trim());
-
-            // Extract address
-            const addressMatch = text.match(/address[:\s]+([^\n]+)/i);
-            if (addressMatch) $('#customerAddress').val(addressMatch[1].trim());
-
-            if (nameMatch || phoneMatch || addressMatch) {
-                alert('✅ Customer information extracted!');
-            } else {
-                alert('❌ Could not extract information. Please enter manually.');
+            if (!text) {
+                alert('⚠️ Please paste or type customer information first');
+                return;
             }
+
+            let extracted = {
+                name: null,
+                phone: null,
+                address: null
+            };
+
+            // Split text into lines
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+            // Method 1: Extract with prefixes (original method)
+            const nameMatch = text.match(/name[:\s]+([^\n]+)/i);
+            if (nameMatch) extracted.name = nameMatch[1].trim();
+
+            const phoneMatch = text.match(/phone[:\s]+(01\d{9}|\+8801\d{9}|8801\d{9})/i);
+            if (phoneMatch) extracted.phone = phoneMatch[1].trim();
+
+            const addressMatch = text.match(/address[:\s]+([^\n]+)/i);
+            if (addressMatch) extracted.address = addressMatch[1].trim();
+
+            // Method 2: Smart extraction without prefixes
+            if (!extracted.name || !extracted.phone || !extracted.address) {
+                lines.forEach((line, index) => {
+                    // Detect phone number (Bangladesh format)
+                    const phonePattern = /(01\d{9}|\+8801\d{9}|8801\d{9})/;
+                    const phoneInLine = line.match(phonePattern);
+
+                    if (phoneInLine && !extracted.phone) {
+                        extracted.phone = phoneInLine[1];
+                        return;
+                    }
+
+                    // Detect name (usually first line without phone, and shorter than address)
+                    // Name characteristics: 2-50 characters, contains letters, may have spaces
+                    const namePattern = /^[a-zA-Z\s\.]{2,50}$/;
+                    if (!extracted.name && namePattern.test(line) && line.length < 50 && !phoneInLine) {
+                        // Check if it's not an address (addresses usually have more words/numbers)
+                        const wordCount = line.split(/\s+/).length;
+                        if (wordCount <= 4) { // Names usually have 1-4 words
+                            extracted.name = line;
+                            return;
+                        }
+                    }
+
+                    // Detect address (usually longest line, or contains common address keywords)
+                    const addressKeywords = ['dhaka', 'road', 'bazar', 'para', 'ganj', 'pur', 'hat', 'bari', 'house', 'flat', 'block', 'sector', 'lane', 'street'];
+                    const hasAddressKeyword = addressKeywords.some(keyword => line.toLowerCase().includes(keyword));
+
+                    if (!extracted.address && (hasAddressKeyword || line.length > 15)) {
+                        // Make sure it's not a phone number or name
+                        if (!phoneInLine && !namePattern.test(line)) {
+                            extracted.address = line;
+                        }
+                    }
+                });
+
+                // Fallback: If we have lines but still missing data
+                if (lines.length >= 3) {
+                    // Assume format: Line 1 = Name, Line 2 = Phone, Line 3+ = Address
+                    if (!extracted.name && lines[0]) {
+                        const phoneInFirstLine = lines[0].match(/(01\d{9}|\+8801\d{9}|8801\d{9})/);
+                        if (!phoneInFirstLine) {
+                            extracted.name = lines[0];
+                        }
+                    }
+
+                    if (!extracted.phone) {
+                        // Find first line with phone number
+                        for (let i = 0; i < lines.length; i++) {
+                            const phoneInLine = lines[i].match(/(01\d{9}|\+8801\d{9}|8801\d{9})/);
+                            if (phoneInLine) {
+                                extracted.phone = phoneInLine[1];
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!extracted.address) {
+                        // Find longest line that's not name or phone
+                        let longestLine = '';
+                        lines.forEach(line => {
+                            const hasPhone = line.match(/(01\d{9}|\+8801\d{9}|8801\d{9})/);
+                            const isName = (extracted.name && line === extracted.name);
+
+                            if (!hasPhone && !isName && line.length > longestLine.length) {
+                                longestLine = line;
+                            }
+                        });
+
+                        if (longestLine) {
+                            extracted.address = longestLine;
+                        }
+                    }
+                } else if (lines.length === 1) {
+                    // Single line: try to extract phone, rest could be name or address
+                    const singleLinePhone = lines[0].match(/(01\d{9}|\+8801\d{9}|8801\d{9})/);
+                    if (singleLinePhone) {
+                        extracted.phone = singleLinePhone[1];
+                        // Remove phone from line to get remaining text
+                        const remaining = lines[0].replace(singleLinePhone[0], '').trim();
+                        if (remaining.length > 0) {
+                            if (remaining.length < 30) {
+                                extracted.name = remaining;
+                            } else {
+                                extracted.address = remaining;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Apply extracted data to form
+            let extractedCount = 0;
+
+            if (extracted.name) {
+                $('#customerName').val(extracted.name);
+                $('#customerName').addClass('border-success');
+                setTimeout(() => $('#customerName').removeClass('border-success'), 2000);
+                extractedCount++;
+            }
+
+            if (extracted.phone) {
+                // Clean phone number (remove +88 or 88 prefix if present)
+                let cleanPhone = extracted.phone;
+                if (cleanPhone.startsWith('+880')) {
+                    cleanPhone = '0' + cleanPhone.substring(4);
+                } else if (cleanPhone.startsWith('880')) {
+                    cleanPhone = '0' + cleanPhone.substring(3);
+                }
+
+                $('#customerPhone').val(cleanPhone);
+                $('#customerPhone').addClass('border-success');
+                setTimeout(() => $('#customerPhone').removeClass('border-success'), 2000);
+                extractedCount++;
+            }
+
+            if (extracted.address) {
+                $('#customerAddress').val(extracted.address);
+                $('#customerAddress').addClass('border-success');
+                setTimeout(() => $('#customerAddress').removeClass('border-success'), 2000);
+                extractedCount++;
+            }
+
+            // Show result
+            if (extractedCount === 3) {
+                showExtractionToast('✅ All information extracted successfully!', 'success');
+            } else if (extractedCount > 0) {
+                showExtractionToast(`⚠️ Extracted ${extractedCount} field(s). Please fill in the missing information.`, 'warning');
+            } else {
+                showExtractionToast('❌ Could not extract information. Please enter manually.', 'danger');
+            }
+
+            // Show extraction summary
+            console.log('Extraction Summary:', extracted);
         });
+
+        // Toast for extraction feedback
+        function showExtractionToast(message, type) {
+            const bgColor = type === 'success' ? 'bg-success' : (type === 'warning' ? 'bg-warning' : 'bg-danger');
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            const toastElement = $(toastHtml).appendTo('body');
+            const toast = new bootstrap.Toast(toastElement[0], { delay: 3000 });
+            toast.show();
+
+            toastElement.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
     </script>
 }
