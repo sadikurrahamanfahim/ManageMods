@@ -1,0 +1,385 @@
+﻿@model List<OrderManagementSystem.Models.Entities.Order>
+@{
+    ViewData["Title"] = "Process Orders";
+}
+
+<style>
+    .order-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+        .order-image:hover {
+            transform: scale(1.05);
+        }
+
+    .image-gallery {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .order-table {
+        min-width: 1400px;
+    }
+
+    .compact-cell {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Filter Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-info text-white">
+                <div class="card-body">
+                    <h6>Ready for Delivery</h6>
+                    <h2 class="mb-0">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search by order number, customer name, phone, or product..." />
+                        </div>
+                        <div class="col-md-4">
+                            <button onclick="window.print()" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-printer"></i> Print List
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">
+                <i class="bi bi-truck"></i> Orders Ready for Delivery
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 order-table" id="ordersTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="compact-cell">Order #</th>
+                                <th class="compact-cell">Customer Info</th>
+                                <th class="compact-cell">Address</th>
+                                <th class="compact-cell">Products</th>
+                                <th class="compact-cell">Total</th>
+                                <th class="compact-cell">Images</th>
+                                <th class="compact-cell">Notes</th>
+                                <th class="compact-cell">Created</th>
+                                <th class="compact-cell text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var order in Model)
+                            {
+                                <tr id="order-@order.Id">
+                                    <!-- Order Number -->
+                                    <td class="compact-cell">
+                                        <strong class="text-primary">@order.OrderNumber</strong>
+                                    </td>
+
+                                    <!-- Customer Info -->
+                                    <td class="compact-cell">
+                                        <strong>@order.CustomerName</strong><br>
+                                        <small class="text-muted">
+                                            <i class="bi bi-telephone"></i> @order.CustomerPhone
+                                        </small>
+                                    </td>
+
+                                    <!-- Address -->
+                                    <td class="compact-cell" style="max-width: 200px;">
+                                        <small>
+                                            <i class="bi bi-geo-alt"></i>
+                                            @order.CustomerAddress
+                                        </small>
+                                    </td>
+
+                                    <!-- Products -->
+                                    <td class="compact-cell" style="max-width: 250px;">
+                                        @if (order.Items != null && order.Items.Any())
+                                        {
+                                            <table class="table table-sm table-borderless mb-0">
+                                                @foreach (var item in order.Items)
+                                                {
+                                                    <tr>
+                                                        <td class="p-1">
+                                                            <strong>@item.ProductName</strong>
+                                                            @if (!string.IsNullOrEmpty(item.ProductColor))
+                                                            {
+                                                                <br>
+                                            
+                                                                <small class="text-muted">@item.ProductColor</small>
+                                                            }
+                                                        </td>
+                                                        <td class="p-1 text-end">
+                                                            <span class="badge bg-secondary">x@item.Quantity</span>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </table>
+                                        }
+                                        else
+                                        {
+                                            <strong>@order.ProductName</strong>
+                                            @if (!string.IsNullOrEmpty(order.ProductColor))
+                                            {
+                                                <br>
+                                
+                                                <small class="text-muted">@order.ProductColor</small>
+                                            }
+                                            <br>
+                                
+                                            <span class="badge bg-secondary">x@order.ProductQuantity</span>
+                                        }
+                                    </td>
+
+                                    <!-- Total Amount -->
+                                    <td class="compact-cell">
+                                        <strong class="text-success fs-6">৳@order.TotalAmount.ToString("N0")</strong>
+                                    </td>
+
+                                    <!-- Images -->
+                                    <td class="compact-cell">
+                                        @if (order.Screenshots != null && order.Screenshots.Any())
+                                        {
+                                            <div class="image-gallery">
+                                                @foreach (var screenshot in order.Screenshots.Take(3))
+                                                {
+                                                    <img src="@screenshot"
+                                                         alt="Order Screenshot"
+                                                         class="img-thumbnail order-image"
+                                                         onclick="showImageModal('@screenshot', '@order.OrderNumber')" />
+                                                }
+                                                @if (order.Screenshots.Count > 3)
+                                                {
+                                                    <div class="d-flex align-items-center justify-content-center bg-light rounded" style="width: 80px; height: 80px; cursor: pointer;" onclick="showAllImages('@order.Id', '@order.OrderNumber')">
+                                                        <span class="badge bg-primary">+@(order.Screenshots.Count - 3)</span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else if (!string.IsNullOrEmpty(order.ScreenshotUrl))
+                                        {
+                                            <img src="@order.ScreenshotUrl"
+                                                 alt="Order Screenshot"
+                                                 class="img-thumbnail order-image"
+                                                 onclick="showImageModal('@order.ScreenshotUrl', '@order.OrderNumber')" />
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted">No images</small>
+                                        }
+                                    </td>
+
+                                    <!-- Notes -->
+                                    <td class="compact-cell" style="max-width: 150px;">
+                                        @if (!string.IsNullOrEmpty(order.OrderNotes))
+                                        {
+                                            <small class="text-muted">@order.OrderNotes</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted">-</small>
+                                        }
+                                    </td>
+
+                                    <!-- Created Date -->
+                                    <td class="compact-cell">
+                                        <small>@order.CreatedAt.ToLocalTimeString("MMM dd")</small><br>
+                                        <small class="text-muted">@order.CreatedAt.ToLocalTimeString("hh:mm tt")</small>
+                                    </td>
+
+                                    <!-- Action Button -->
+                                    <td class="compact-cell text-center">
+                                        <button type="button"
+                                                class="btn btn-success btn-sm"
+                                                onclick="markForDelivery('@order.Id')"
+                                                title="Mark as Out for Delivery">
+                                            <i class="bi bi-check-circle-fill"></i> Process
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No orders ready for delivery</p>
+                    <a asp-action="Index" class="btn btn-primary">
+                        <i class="bi bi-list"></i> View All Orders
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle">Order Screenshot</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" style="max-height: 70vh;" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a id="downloadImageBtn" href="" download class="btn btn-primary">
+                    <i class="bi bi-download"></i> Download
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Images Modal -->
+<div class="modal fade" id="allImagesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="allImagesModalTitle">All Order Screenshots</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="allImagesContainer" class="row g-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            const searchValue = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#ordersTable tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchValue) ? '' : 'none';
+            });
+        });
+
+        // Show single image in modal
+        function showImageModal(imageUrl, orderNumber) {
+            document.getElementById('modalImage').src = imageUrl;
+            document.getElementById('imageModalTitle').textContent = 'Order ' + orderNumber + ' - Screenshot';
+            document.getElementById('downloadImageBtn').href = imageUrl;
+            new bootstrap.Modal(document.getElementById('imageModal')).show();
+        }
+
+        // Show all images in modal
+        function showAllImages(orderId, orderNumber) {
+            // Get all images for this order
+            const orderRow = document.getElementById('order-' + orderId);
+            const images = orderRow.querySelectorAll('.order-image');
+
+            let html = '';
+            images.forEach((img, index) => {
+                html += `
+                    <div class="col-md-4">
+                        <div class="card">
+                            <img src="${img.src}" class="card-img-top" style="height: 300px; object-fit: cover;">
+                            <div class="card-body text-center">
+                                <small>Image ${index + 1}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('allImagesContainer').innerHTML = html;
+            document.getElementById('allImagesModalTitle').textContent = 'Order ' + orderNumber + ' - All Screenshots';
+            new bootstrap.Modal(document.getElementById('allImagesModal')).show();
+        }
+
+        // Mark order for delivery
+        function markForDelivery(orderId) {
+            if (confirm('Mark this order as Out for Delivery?')) {
+                $.ajax({
+                    url: '@Url.Action("MarkOutForDelivery", "Orders")',
+                    type: 'POST',
+                    data: { id: orderId },
+                    success: function(response) {
+                        if (response.success) {
+                            // Remove row with animation
+                            const row = document.getElementById('order-' + orderId);
+                            row.style.transition = 'all 0.3s';
+                            row.style.backgroundColor = '#d4edda';
+
+                            setTimeout(function() {
+                                row.style.opacity = '0';
+                                setTimeout(function() {
+                                    row.remove();
+
+                                    // Check if table is empty
+                                    if (document.querySelectorAll('#ordersTable tbody tr').length === 0) {
+                                        location.reload();
+                                    }
+                                }, 300);
+                            }, 500);
+
+                            // Show success toast
+                            showToast('Success', response.message, 'success');
+                        } else {
+                            showToast('Error', response.message, 'danger');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error', 'An error occurred. Please try again.', 'danger');
+                    }
+                });
+            }
+        }
+
+        // Toast notification
+        function showToast(title, message, type) {
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong>${title}:</strong> ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            const toastElement = $(toastHtml).appendTo('body');
+            const toast = new bootstrap.Toast(toastElement[0], { delay: 3000 });
+            toast.show();
+
+            toastElement.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+    </script>
+}

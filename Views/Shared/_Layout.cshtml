@@ -114,6 +114,15 @@
                 </a>
             </li>
 
+            @if (userRole == "delivery_handler" || userRole == "admin")
+            {
+                <li class="nav-item">
+                    <a class="nav-link @GetActiveClass("Orders", "ProcessOrders")" asp-controller="Orders" asp-action="ProcessOrders">
+                        <i class="bi bi-truck"></i> Process Orders
+                    </a>
+                </li>
+            }
+
             @if (userRole == "admin")
             {
                 <li class="nav-item mt-3">

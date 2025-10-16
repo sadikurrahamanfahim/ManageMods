@@ -161,5 +161,35 @@ namespace OrderManagementSystem.Controllers
 
             return Json(results);
         }
+
+        [Authorize("admin", "delivery_handler")]
+        [HttpGet]
+        public async Task<IActionResult> ProcessOrders()
+        {
+            // Get orders that are ready for delivery (status: delivery_submitted)
+            var orders = await _orderService.GetAllOrders("delivery_submitted", null);
+            return View(orders);
+        }
+
+        [Authorize("admin", "delivery_handler")]
+        [HttpPost]
+        public async Task<IActionResult> MarkOutForDelivery(Guid id)
+        {
+            var userId = Guid.Parse(HttpContext.Session.GetString("UserId")!);
+
+            var result = await _orderService.UpdateOrderStatus(
+                id,
+                "out_for_delivery",
+                userId,
+                "Order marked for delivery"
+            );
+
+            if (result)
+            {
+                return Json(new { success = true, message = "Order marked for delivery successfully" });
+            }
+
+            return Json(new { success = false, message = "Failed to update status" });
+        }
     }
 }
