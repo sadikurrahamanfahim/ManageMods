@@ -31,6 +31,8 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddSingleton<ISupabaseStorageService, SupabaseStorageService>();
+builder.Services.AddHttpClient<ISteadfastService, SteadfastService>();
+builder.Services.AddHostedService<SteadfastSyncService>();
 
 // Configure HttpContext Accessor
 builder.Services.AddHttpContextAccessor();

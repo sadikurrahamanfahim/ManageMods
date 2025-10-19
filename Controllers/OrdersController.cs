@@ -191,5 +191,219 @@ namespace OrderManagementSystem.Controllers
 
             return Json(new { success = false, message = "Failed to update status" });
         }
+
+        [Authorize("admin", "delivery_handler")]
+        [HttpGet]
+        public async Task<IActionResult> PendingOrders()
+        {
+            var orders = await _orderService.GetAllOrders("pending", null);
+            return View(orders);
+        }
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> SendToSteadfast(Guid orderId, SteadfastOrderRequest request)
+        {
+            try
+            {
+                // Validate request
+                var validation = SteadfastValidator.ValidateOrder(
+                    request.RecipientName,
+                    request.RecipientPhone,
+                    request.RecipientAddress,
+                    request.CodAmount
+                );
+
+                if (!validation.isValid)
+                {
+                    return Json(new { success = false, message = validation.errorMessage });
+                }
+
+                // Rest of the code...
+                try
+                {
+                    var order = await _orderService.GetOrderById(orderId);
+
+                    if (order == null)
+                    {
+                        return Json(new { success = false, message = "Order not found" });
+                    }
+
+                    if (order.SentToSteadfast)
+                    {
+                        return Json(new { success = false, message = "Order already sent to Steadfast" });
+                    }
+
+                    // Send to Steadfast
+                    var steadfastService = HttpContext.RequestServices.GetRequiredService<ISteadfastService>();
+                    var response = await steadfastService.CreateOrder(request);
+
+                    if (response.Status == 200 && response.Consignment != null)
+                    {
+                        // Update order with Steadfast details
+                        order.SteadfastConsignmentId = response.Consignment.ConsignmentId;
+                        order.SteadfastTrackingCode = response.Consignment.TrackingCode;
+                        order.SteadfastStatus = response.Consignment.Status;
+                        order.SentToSteadfast = true;
+                        order.SentToSteadfastAt = DateTime.UtcNow;
+                        order.Status = "delivery_submitted";
+                        order.UpdatedAt = DateTime.UtcNow;
+
+                        await _orderService.UpdateOrder(order);
+
+                        // Add to history
+                        var userId = Guid.Parse(HttpContext.Session.GetString("UserId")!);
+                        await _orderService.UpdateOrderStatus(orderId, "delivery_submitted", userId,
+                            $"Sent to Steadfast. Tracking Code: {response.Consignment.TrackingCode}");
+
+                        return Json(new
+                        {
+                            success = true,
+                            message = "Order sent to Steadfast successfully",
+                            trackingCode = response.Consignment.TrackingCode,
+                            consignmentId = response.Consignment.ConsignmentId
+                        });
+                    }
+                    else
+                    {
+                        return Json(new { success = false, message = response.Message });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return Json(new { success = false, message = $"Error: {ex.Message}" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        //[Authorize("admin", "delivery_handler")]
+        //[HttpPost]
+        //public async Task<IActionResult> SendToSteadfast(Guid orderId, SteadfastOrderRequest request)
+        //{
+            
+        //}
+
+        [Authorize("admin", "delivery_handler")]
+        [HttpGet]
+        public async Task<IActionResult> CheckSteadfastStatus(string trackingCode)
+        {
+            try
+            {
+                var steadfastService = HttpContext.RequestServices.GetRequiredService<ISteadfastService>();
+                var response = await steadfastService.CheckDeliveryStatus(trackingCode);
+
+                return Json(new
+                {
+                    success = true,
+                    status = response.DeliveryStatus
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error: {ex.Message}" });
+            }
+        }
+
+        // Bulk send orders to Steadfast
+        [Authorize("admin")]
+        [HttpPost]
+        public async Task<IActionResult> BulkSendToSteadfast(List<Guid> orderIds)
+        {
+            try
+            {
+                var steadfastService = HttpContext.RequestServices.GetRequiredService<ISteadfastService>();
+                var userId = Guid.Parse(HttpContext.Session.GetString("UserId")!);
+
+                var results = new List<object>();
+
+                foreach (var orderId in orderIds.Take(50)) // Max 50 at a time
+                {
+                    var order = await _orderService.GetOrderById(orderId);
+
+                    if (order == null || order.SentToSteadfast)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var request = new SteadfastOrderRequest
+                        {
+                            Invoice = order.OrderNumber,
+                            RecipientName = order.CustomerName,
+                            RecipientPhone = order.CustomerPhone,
+                            RecipientAddress = order.CustomerAddress,
+                            CodAmount = order.TotalAmount,
+                            Note = order.OrderNotes,
+                            AlternativePhone = order.AlternativePhone,
+                            RecipientEmail = order.RecipientEmail,
+                            ItemDescription = order.Items != null && order.Items.Any()
+                                ? string.Join(", ", order.Items.Select(i => i.ProductName))
+                                : order.ProductName,
+                            TotalLot = order.Items?.Count ?? 1,
+                            DeliveryType = 0
+                        };
+
+                        var response = await steadfastService.CreateOrder(request);
+
+                        if (response.Status == 200 && response.Consignment != null)
+                        {
+                            order.SteadfastConsignmentId = response.Consignment.ConsignmentId;
+                            order.SteadfastTrackingCode = response.Consignment.TrackingCode;
+                            order.SteadfastStatus = response.Consignment.Status;
+                            order.SentToSteadfast = true;
+                            order.SentToSteadfastAt = DateTime.UtcNow;
+                            order.Status = "delivery_submitted";
+
+                            await _orderService.UpdateOrder(order);
+
+                            results.Add(new
+                            {
+                                orderId = orderId,
+                                success = true,
+                                trackingCode = response.Consignment.TrackingCode
+                            });
+                        }
+                        else
+                        {
+                            results.Add(new
+                            {
+                                orderId = orderId,
+                                success = false,
+                                message = response.Message
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add(new
+                        {
+                            orderId = orderId,
+                            success = false,
+                            message = ex.Message
+                        });
+                    }
+                }
+
+                var successCount = results.Count(r => ((dynamic)r).success);
+                var failCount = results.Count - successCount;
+
+                return Json(new
+                {
+                    success = true,
+                    message = $"Sent {successCount} orders successfully. {failCount} failed.",
+                    results = results
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

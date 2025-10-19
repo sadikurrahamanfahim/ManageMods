@@ -35,5 +35,30 @@ namespace OrderManagementSystem.Controllers
 
             return View(dashboardData);
         }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> GetSteadfastBalance()
+        {
+            try
+            {
+                var steadfastService = HttpContext.RequestServices.GetRequiredService<ISteadfastService>();
+                var response = await steadfastService.GetCurrentBalance();
+
+                return Json(new
+                {
+                    success = true,
+                    balance = response.CurrentBalance
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
     }
 }

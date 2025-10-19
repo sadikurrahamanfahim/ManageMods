@@ -166,5 +166,32 @@ namespace OrderManagementSystem.Models.Entities
                 return ProductPrice * ProductQuantity;
             }
         }
+
+        // Add these properties to your existing Order class
+
+        [Column("steadfast_consignment_id")]
+        public long? SteadfastConsignmentId { get; set; }
+
+        [Column("steadfast_tracking_code")]
+        [MaxLength(50)]
+        public string? SteadfastTrackingCode { get; set; }
+
+        [Column("steadfast_status")]
+        [MaxLength(100)]
+        public string? SteadfastStatus { get; set; }
+
+        [Column("sent_to_steadfast")]
+        public bool SentToSteadfast { get; set; } = false;
+
+        [Column("sent_to_steadfast_at")]
+        public DateTime? SentToSteadfastAt { get; set; }
+
+        [Column("alternative_phone")]
+        [MaxLength(20)]
+        public string? AlternativePhone { get; set; }
+
+        [Column("recipient_email")]
+        [MaxLength(255)]
+        public string? RecipientEmail { get; set; }
     }
 }
