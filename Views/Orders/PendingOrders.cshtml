@@ -1,6 +1,6 @@
 ﻿@model List<OrderManagementSystem.Models.Entities.Order>
 @{
-    ViewData["Title"] = "Pending Orders - Review & Send";
+    ViewData["Title"] = "Pending Orders - Review & Send to Steadfast";
 }
 
 <style>
@@ -8,58 +8,128 @@
         border-left: 5px solid #ffc107;
         transition: all 0.3s;
     }
-
-        .order-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transform: translateY(-2px);
-        }
-
-        .order-card.sent {
-            border-left-color: #28a745;
-            opacity: 0.7;
-        }
-
+    .order-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    .order-card.sent {
+        border-left-color: #28a745;
+        opacity: 0.7;
+    }
+    .order-card.selected {
+        border-left-color: #667eea;
+        background-color: #f8f9ff;
+    }
     .editable-field {
         border: 2px dashed #dee2e6;
         padding: 8px;
         border-radius: 4px;
         background: #f8f9fa;
+        transition: all 0.2s;
     }
-
-        .editable-field:focus {
-            border-color: #667eea;
-            background: white;
-        }
-
+    .editable-field:focus {
+        border-color: #667eea;
+        background: white;
+        border-style: solid;
+    }
     .required-badge {
         color: #dc3545;
         font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .order-checkbox {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        margin-right: 15px;
+    }
+    .bulk-actions-bar {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        animation: slideDown 0.3s ease;
+    }
+
+    @@keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .stats-badge {
+        font-size: 1.2rem;
+        padding: 8px 16px;
     }
 </style>
 
 <div class="container-fluid">
-    <!-- Stats -->
+    <!-- Stats Row -->
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card shadow-sm border-0 bg-warning text-white">
-                <div class="card-body">
-                    <h6>Pending Orders</h6>
+                <div class="card-body text-center">
+                    <h6 class="mb-1">Pending Orders</h6>
                     <h2 class="mb-0">@Model.Count(o => !o.SentToSteadfast)</h2>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card shadow-sm border-0 bg-success text-white">
-                <div class="card-body">
-                    <h6>Sent to Steadfast</h6>
+                <div class="card-body text-center">
+                    <h6 class="mb-1">Sent to Steadfast</h6>
                     <h2 class="mb-0">@Model.Count(o => o.SentToSteadfast)</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 bg-info text-white">
+                <div class="card-body text-center">
+                    <h6 class="mb-1">Total</h6>
+                    <h2 class="mb-0">@Model.Count</h2>
                 </div>
             </div>
         </div>
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Search orders..." />
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control" 
+                               placeholder="Search by order number, customer name, phone..." />
+                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                            <i class="bi bi-x"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar (Hidden by default) -->
+    <div class="card shadow-sm mb-4 bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+        <div class="card-body bg-primary text-white">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-square"></i> 
+                        <strong><span id="selectedCount">0</span></strong> order(s) selected
+                    </h5>
+                </div>
+                <div class="col-md-8 text-end">
+                    <button type="button" class="btn btn-light btn-lg me-2" onclick="selectAll()">
+                        <i class="bi bi-check-all"></i> Select All Pending
+                    </button>
+                    <button type="button" class="btn btn-success btn-lg me-2" onclick="bulkSendToSteadfast()">
+                        <i class="bi bi-send-fill"></i> Send Selected to Steadfast
+                    </button>
+                    <button type="button" class="btn btn-outline-light btn-lg" onclick="clearSelection()">
+                        <i class="bi bi-x-circle"></i> Clear Selection
+                    </button>
                 </div>
             </div>
         </div>
@@ -68,209 +138,332 @@
     <!-- Orders List -->
     @if (Model.Any())
     {
-        @foreach (var order in Model)
-        {
-            <div class="card shadow-sm mb-4 order-card @(order.SentToSteadfast ? "sent" : "")" id="order-@order.Id">
-                <div class="card-header @(order.SentToSteadfast ? "bg-success" : "bg-warning") text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="bi bi-box-seam"></i> @order.OrderNumber
-                            @if (order.SentToSteadfast)
-                            {
-                                <span class="badge bg-light text-success ms-2">
-                                    <i class="bi bi-check-circle"></i> Sent to Steadfast
-                                </span>
-                            }
-                        </h5>
-                        <div>
-                            <small>Created: @order.CreatedAt.ToLocalTimeString("MMM dd, hh:mm tt")</small>
+        <div id="ordersContainer">
+            @foreach (var order in Model)
+            {
+                <div class="card shadow-sm mb-4 order-card @(order.SentToSteadfast ? "sent" : "")" 
+                     id="order-@order.Id" 
+                     data-order-id="@order.Id"
+                     data-sent="@order.SentToSteadfast.ToString().ToLower()">
+                    
+                    <!-- Card Header -->
+                    <div class="card-header @(order.SentToSteadfast ? "bg-success" : "bg-warning") text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                @if (!order.SentToSteadfast)
+                                {
+                                    <input type="checkbox" 
+                                           class="form-check-input order-checkbox" 
+                                           value="@order.Id"
+                                           data-order-number="@order.OrderNumber">
+                                }
+                                <h5 class="mb-0">
+                                    <i class="bi bi-box-seam"></i> @order.OrderNumber
+                                    @if (order.SentToSteadfast)
+                                    {
+                                        <span class="badge bg-light text-success ms-2">
+                                            <i class="bi bi-check-circle-fill"></i> Sent to Steadfast
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-warning ms-2">
+                                            <i class="bi bi-clock-fill"></i> Pending Review
+                                        </span>
+                                    }
+                                </h5>
+                            </div>
+                            <div class="text-end">
+                                <small class="d-block">Created: @order.CreatedAt.ToLocalTimeString("MMM dd, yyyy")</small>
+                                <small class="d-block">@order.CreatedAt.ToLocalTimeString("hh:mm tt")</small>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <form class="steadfast-form" data-order-id="@order.Id">
-                        <div class="row">
-                            <!-- Left Column -->
-                            <div class="col-md-6">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-person-fill text-primary"></i> Customer Information
-                                    <span class="required-badge">* Required</span>
-                                </h6>
 
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        Invoice/Order Number <span class="required-badge">*</span>
-                                    </label>
-                                    <input type="text"
-                                           name="invoice"
-                                           class="form-control editable-field"
-                                           value="@order.OrderNumber"
-                                           required
-                                           readonly />
-                                    <small class="text-muted">Auto-filled, cannot be changed</small>
-                                </div>
+                    <!-- Card Body -->
+                    <div class="card-body">
+                        <form class="steadfast-form" data-order-id="@order.Id">
+                            <div class="row">
+                                <!-- Left Column: Customer Information -->
+                                <div class="col-md-6">
+                                    <h6 class="border-bottom pb-2 mb-3">
+                                        <i class="bi bi-person-fill text-primary"></i> Customer Information
+                                        <span class="required-badge ms-2">* = Required</span>
+                                    </h6>
 
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        Recipient Name <span class="required-badge">*</span>
-                                    </label>
-                                    <input type="text"
-                                           name="recipient_name"
-                                           class="form-control editable-field"
-                                           value="@order.CustomerName"
-                                           required />
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        Recipient Phone <span class="required-badge">*</span>
-                                    </label>
-                                    <input type="text"
-                                           name="recipient_phone"
-                                           class="form-control editable-field"
-                                           value="@order.CustomerPhone"
-                                           pattern="01\d{9}"
-                                           required />
-                                    <small class="text-muted">Must be 11 digits (01XXXXXXXXX)</small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Alternative Phone</label>
-                                    <input type="text"
-                                           name="alternative_phone"
-                                           class="form-control editable-field"
-                                           value="@order.AlternativePhone"
-                                           pattern="01\d{9}" />
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Recipient Email</label>
-                                    <input type="email"
-                                           name="recipient_email"
-                                           class="form-control editable-field"
-                                           value="@order.RecipientEmail" />
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        Delivery Address <span class="required-badge">*</span>
-                                    </label>
-                                    <textarea name="recipient_address"
-                                      class="form-control editable-field"
-                                      rows="3"
-                                      required>@order.CustomerAddress</textarea>
-                                    <small class="text-muted">Maximum 250 characters</small>
-                                </div>
-                            </div>
-
-                            <!-- Right Column -->
-                            <div class="col-md-6">
-                                <h6 class="border-bottom pb-2 mb-3">
-                                    <i class="bi bi-box text-success"></i> Order Details
-                                </h6>
-
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        COD Amount (৳) <span class="required-badge">*</span>
-                                    </label>
-                                    <input type="number"
-                                           name="cod_amount"
-                                           class="form-control editable-field"
-                                           value="@order.TotalAmount"
-                                           step="0.01"
-                                           min="0"
-                                           required />
-                                    <small class="text-muted">Cash on Delivery amount</small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Item Description</label>
-                                    <textarea name="item_description"
-                                      class="form-control editable-field"
-                                      rows="2">@(order.Items != null && order.Items.Any() ? string.Join(", ", order.Items.Select(i => i.ProductName)) : order.ProductName)</textarea>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Total Lot (Number of Items)</label>
-                                    <input type="number"
-                                           name="total_lot"
-                                           class="form-control editable-field"
-                                           value="@(order.Items?.Count ?? 1)"
-                                           min="1" />
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Delivery Type</label>
-                                    <select name="delivery_type" class="form-select editable-field">
-                                        <option value="0">Home Delivery</option>
-                                        <option value="1">Point Delivery / Steadfast Hub Pickup</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Delivery Note</label>
-                                    <textarea name="note"
-                                      class="form-control editable-field"
-                                      rows="2">@order.OrderNotes</textarea>
-                                    <small class="text-muted">Delivery instructions</small>
-                                </div>
-
-                                <!-- Steadfast Info (if sent) -->
-                                @if (order.SentToSteadfast)
-                                {
-                                    <div class="alert alert-success">
-                                        <strong><i class="bi bi-check-circle"></i> Steadfast Details:</strong><br>
-                                        <strong>Consignment ID:</strong> @order.SteadfastConsignmentId<br>
-                                        <strong>Tracking Code:</strong>
-                                        <span class="badge bg-primary">@order.SteadfastTrackingCode</span><br>
-                                        <strong>Status:</strong> @order.SteadfastStatus<br>
-                                        <strong>Sent At:</strong> @order.SentToSteadfastAt?.ToLocalTimeString()
-                                        <br>
-                                        <button type="button" class="btn btn-sm btn-info mt-2" onclick="checkStatus('@order.SteadfastTrackingCode', '@order.Id')">
-                                            <i class="bi bi-arrow-repeat"></i> Refresh Status
-                                        </button>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Invoice/Order Number <span class="required-badge">*</span>
+                                        </label>
+                                        <input type="text" 
+                                               name="invoice" 
+                                               class="form-control editable-field" 
+                                               value="@order.OrderNumber" 
+                                               required 
+                                               readonly 
+                                               style="background-color: #e9ecef; cursor: not-allowed;" />
+                                        <small class="text-muted">
+                                            <i class="bi bi-lock-fill"></i> Auto-generated, cannot be changed
+                                        </small>
                                     </div>
-                                }
-                            </div>
-                        </div>
 
-                        <!-- Action Buttons -->
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-outline-primary" target="_blank">
-                                            <i class="bi bi-eye"></i> View Full Details
-                                        </a>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Recipient Name <span class="required-badge">*</span>
+                                        </label>
+                                        <input type="text" 
+                                               name="recipient_name" 
+                                               class="form-control editable-field" 
+                                               value="@order.CustomerName" 
+                                               maxlength="100"
+                                               required />
+                                        <small class="text-muted">Maximum 100 characters</small>
                                     </div>
-                                    <div>
-                                        @if (!order.SentToSteadfast)
-                                        {
-                                            <button type="button" class="btn btn-success btn-lg" onclick="sendToSteadfast(this)">
-                                                <i class="bi bi-send"></i> Send to Steadfast
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Recipient Phone <span class="required-badge">*</span>
+                                        </label>
+                                        <input type="text" 
+                                               name="recipient_phone" 
+                                               class="form-control editable-field" 
+                                               value="@order.CustomerPhone" 
+                                               pattern="01\d{9}" 
+                                               maxlength="11"
+                                               required />
+                                        <small class="text-muted">
+                                            <i class="bi bi-info-circle"></i> Must be 11 digits (01XXXXXXXXX)
+                                        </small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Alternative Phone <span class="text-muted">(Optional)</span>
+                                        </label>
+                                        <input type="text" 
+                                               name="alternative_phone" 
+                                               class="form-control editable-field" 
+                                               value="@order.AlternativePhone" 
+                                               pattern="01\d{9}"
+                                               maxlength="11" />
+                                        <small class="text-muted">11 digits if provided</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Recipient Email <span class="text-muted">(Optional)</span>
+                                        </label>
+                                        <input type="email" 
+                                               name="recipient_email" 
+                                               class="form-control editable-field" 
+                                               value="@order.RecipientEmail" />
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Delivery Address <span class="required-badge">*</span>
+                                        </label>
+                                        <textarea name="recipient_address" 
+                                                  class="form-control editable-field" 
+                                                  rows="4" 
+                                                  maxlength="250"
+                                                  required>@order.CustomerAddress</textarea>
+                                        <small class="text-muted">Maximum 250 characters</small>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: Order Details -->
+                                <div class="col-md-6">
+                                    <h6 class="border-bottom pb-2 mb-3">
+                                        <i class="bi bi-box-seam text-success"></i> Order Details
+                                    </h6>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            COD Amount (৳) <span class="required-badge">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">৳</span>
+                                            <input type="number" 
+                                                   name="cod_amount" 
+                                                   class="form-control editable-field" 
+                                                   value="@order.TotalAmount" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   required />
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="bi bi-cash"></i> Cash on Delivery amount (including all charges)
+                                        </small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Item Description <span class="text-muted">(Optional)</span>
+                                        </label>
+                                        <textarea name="item_description" 
+                                                  class="form-control editable-field" 
+                                                  rows="3">@(order.Items != null && order.Items.Any() ? string.Join(", ", order.Items.Select(i => $"{i.ProductName} x{i.Quantity}")) : order.ProductName)</textarea>
+                                        <small class="text-muted">Describe the items being delivered</small>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">
+                                                Total Lot <span class="text-muted">(Optional)</span>
+                                            </label>
+                                            <input type="number" 
+                                                   name="total_lot" 
+                                                   class="form-control editable-field" 
+                                                   value="@(order.Items?.Count ?? 1)" 
+                                                   min="1" />
+                                            <small class="text-muted">Number of items</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">
+                                                Delivery Type
+                                            </label>
+                                            <select name="delivery_type" class="form-select editable-field">
+                                                <option value="0">Home Delivery</option>
+                                                <option value="1">Point Delivery</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">
+                                            Delivery Note <span class="text-muted">(Optional)</span>
+                                        </label>
+                                        <textarea name="note" 
+                                                  class="form-control editable-field" 
+                                                  rows="3">@order.OrderNotes</textarea>
+                                        <small class="text-muted">
+                                            <i class="bi bi-sticky"></i> Special delivery instructions
+                                        </small>
+                                    </div>
+
+                                    <!-- Steadfast Info (if already sent) -->
+                                    @if (order.SentToSteadfast)
+                                    {
+                                        <div class="alert alert-success mb-3">
+                                            <h6 class="alert-heading">
+                                                <i class="bi bi-check-circle-fill"></i> Steadfast Details
+                                            </h6>
+                                            <hr>
+                                            <p class="mb-1">
+                                                <strong>Consignment ID:</strong> 
+                                                <span class="badge bg-success">@order.SteadfastConsignmentId</span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>Tracking Code:</strong> 
+                                                <span class="badge bg-primary fs-6">@order.SteadfastTrackingCode</span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>Status:</strong> 
+                                                <span class="badge bg-info">@order.SteadfastStatus</span>
+                                            </p>
+                                            <p class="mb-3">
+                                                <strong>Sent At:</strong> 
+                                                @order.SentToSteadfastAt?.ToLocalTimeString("MMM dd, yyyy hh:mm tt")
+                                            </p>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-info" 
+                                                    onclick="checkStatus('@order.SteadfastTrackingCode', '@order.Id')">
+                                                <i class="bi bi-arrow-repeat"></i> Refresh Status
                                             </button>
-                                        }
-                                        else
-                                        {
-                                            <button type="button" class="btn btn-secondary" disabled>
-                                                <i class="bi bi-check-circle"></i> Already Sent
-                                            </button>
-                                        }
+                                        </div>
+                                    }
+
+                                    <!-- Order Summary -->
+                                    <div class="card bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="bi bi-receipt"></i> Order Summary
+                                            </h6>
+                                            @if (order.Items != null && order.Items.Any())
+                                            {
+                                                @foreach (var item in order.Items)
+                                                {
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span>
+                                                            @item.ProductName
+                                                            @if (!string.IsNullOrEmpty(item.ProductColor))
+                                                            {
+                                                                <small class="text-muted">(@item.ProductColor)</small>
+                                                            }
+                                                        </span>
+                                                        <span>
+                                                            <span class="badge bg-secondary">x@item.Quantity</span>
+                                                            ৳@((item.Price * item.Quantity).ToString("N0"))
+                                                        </span>
+                                                    </div>
+                                                }
+                                                <hr>
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>@order.ProductName</span>
+                                                    <span>
+                                                        <span class="badge bg-secondary">x@order.ProductQuantity</span>
+                                                        ৳@((order.ProductPrice * order.ProductQuantity).ToString("N0"))
+                                                    </span>
+                                                </div>
+                                                <hr>
+                                            }
+                                            <div class="d-flex justify-content-between">
+                                                <strong>Total:</strong>
+                                                <strong class="text-success fs-5">৳@order.TotalAmount.ToString("N0")</strong>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </form>
+
+                            <!-- Action Buttons -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded">
+                                        <div>
+                                            <a asp-action="Details" 
+                                               asp-route-id="@order.Id" 
+                                               class="btn btn-outline-primary" 
+                                               target="_blank">
+                                                <i class="bi bi-eye"></i> View Full Details
+                                            </a>
+                                        </div>
+                                        <div>
+                                            @if (!order.SentToSteadfast)
+                                            {
+                                                <button type="button" 
+                                                        class="btn btn-success btn-lg px-5" 
+                                                        onclick="sendToSteadfast(this)">
+                                                    <i class="bi bi-send-fill"></i> Send to Steadfast
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-secondary btn-lg" disabled>
+                                                    <i class="bi bi-check-circle-fill"></i> Already Sent
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
     }
     else
     {
         <div class="text-center py-5">
-            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">No pending orders</p>
-            <a asp-action="Index" class="btn btn-primary">
+            <i class="bi bi-inbox" style="font-size: 5rem; color: #ccc;"></i>
+            <h4 class="text-muted mt-3">No Pending Orders</h4>
+            <p class="text-muted">All orders have been processed!</p>
+            <a asp-action="Index" class="btn btn-primary btn-lg mt-3">
                 <i class="bi bi-list"></i> View All Orders
             </a>
         </div>
@@ -279,108 +472,270 @@
 
 @section Scripts {
     <script>
+        let selectedOrders = [];
+        
+        // Initialize
+        $(document).ready(function() {
+            updateBulkActionsBar();
+        });
+        
+        // Checkbox change handler
+        $(document).on('change', '.order-checkbox', function() {
+            const orderId = $(this).val();
+            const orderCard = $(this).closest('.order-card');
+            
+            if ($(this).is(':checked')) {
+                if (!selectedOrders.includes(orderId)) {
+                    selectedOrders.push(orderId);
+                }
+                orderCard.addClass('selected');
+            } else {
+                selectedOrders = selectedOrders.filter(id => id !== orderId);
+                orderCard.removeClass('selected');
+            }
+            
+            updateBulkActionsBar();
+        });
+        
+        // Update bulk actions bar
+        function updateBulkActionsBar() {
+            if (selectedOrders.length > 0) {
+                $('#bulkActionsBar').slideDown(300);
+                $('#selectedCount').text(selectedOrders.length);
+            } else {
+                $('#bulkActionsBar').slideUp(300);
+            }
+        }
+        
+        // Select all pending orders
+        function selectAll() {
+            $('.order-checkbox').prop('checked', true).trigger('change');
+        }
+        
+        // Clear selection
+        function clearSelection() {
+            $('.order-checkbox').prop('checked', false);
+            $('.order-card').removeClass('selected');
+            selectedOrders = [];
+            updateBulkActionsBar();
+        }
+        
         // Search functionality
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            const searchValue = this.value.toLowerCase();
-            const cards = document.querySelectorAll('.order-card');
-
-            cards.forEach(card => {
-                const text = card.textContent.toLowerCase();
-                card.style.display = text.includes(searchValue) ? '' : 'none';
+        $('#searchInput').on('keyup', function() {
+            const searchValue = $(this).val().toLowerCase();
+            
+            $('.order-card').each(function() {
+                const text = $(this).text().toLowerCase();
+                $(this).toggle(text.includes(searchValue));
             });
         });
+        
+        // Clear search
+        function clearSearch() {
+            $('#searchInput').val('');
+            $('.order-card').show();
+        }
 
-        // Send to Steadfast
+        // Send single order to Steadfast
         function sendToSteadfast(button) {
-            const form = button.closest('form');
-            const orderId = form.dataset.orderId;
-            const formData = new FormData(form);
+            const form = $(button).closest('form');
+            const orderId = form.data('order-id');
 
-            // Validate required fields
-            if (!form.checkValidity()) {
-                form.reportValidity();
+            // Validate form
+            if (!form[0].checkValidity()) {
+                form[0].reportValidity();
                 return;
             }
 
-            // Prepare request data
+            // Collect form data - make sure property names match C# model exactly
             const requestData = {
-                invoice: formData.get('invoice'),
-                recipient_name: formData.get('recipient_name'),
-                recipient_phone: formData.get('recipient_phone'),
-                recipient_address: formData.get('recipient_address'),
-                cod_amount: parseFloat(formData.get('cod_amount')),
-                note: formData.get('note') || null,
-                alternative_phone: formData.get('alternative_phone') || null,
-                recipient_email: formData.get('recipient_email') || null,
-                item_description: formData.get('item_description') || null,
-                total_lot: formData.get('total_lot') ? parseInt(formData.get('total_lot')) : null,
-                delivery_type: parseInt(formData.get('delivery_type'))
+                orderId: orderId,
+                request: {
+                    invoice: form.find('[name="invoice"]').val(),
+                    recipient_name: form.find('[name="recipient_name"]').val(),
+                    recipient_phone: form.find('[name="recipient_phone"]').val(),
+                    recipient_address: form.find('[name="recipient_address"]').val(),
+                    cod_amount: parseFloat(form.find('[name="cod_amount"]').val()),
+                    note: form.find('[name="note"]').val() || null,
+                    alternative_phone: form.find('[name="alternative_phone"]').val() || null,
+                    recipient_email: form.find('[name="recipient_email"]').val() || null,
+                    item_description: form.find('[name="item_description"]').val() || null,
+                    total_lot: form.find('[name="total_lot"]').val() ? parseInt(form.find('[name="total_lot"]').val()) : null,
+                    delivery_type: parseInt(form.find('[name="delivery_type"]').val())
+                }
             };
 
-            if (!confirm('⚠️ Confirm sending this order to Steadfast Courier?\n\nMake sure all information is correct.')) {
+            // Debug: Log the data being sent
+            console.log('Sending data:', JSON.stringify(requestData, null, 2));
+
+            if (!confirm(`⚠️ Confirm sending order to Steadfast?\n\nOrder: ${requestData.request.invoice}\nCustomer: ${requestData.request.recipient_name}\nCOD: ৳${requestData.request.cod_amount}\n\nMake sure all information is correct!`)) {
                 return;
             }
 
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+            $(button).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Sending...');
 
             $.ajax({
                 url: '@Url.Action("SendToSteadfast", "Orders")',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({
-                    orderId: orderId,
-                    request: requestData
-                }),
+                data: JSON.stringify(requestData),
                 success: function(response) {
+                    console.log('Response:', response);
                     if (response.success) {
-                        showToast('Success', `Order sent to Steadfast! Tracking Code: ${response.trackingCode}`, 'success');
+                        showToast('Success', `Order sent successfully!<br>Tracking Code: <strong>${response.trackingCode}</strong>`, 'success');
 
-                        // Mark card as sent
-                        const card = document.getElementById('order-' + orderId);
-                        card.classList.add('sent');
+                        // Clear localStorage for this order
+                        clearOrderStorage(orderId);
 
-                        // Reload page after 2 seconds
                         setTimeout(function() {
                             location.reload();
                         }, 2000);
                     } else {
                         showToast('Error', response.message, 'danger');
-                        button.disabled = false;
-                        button.innerHTML = '<i class="bi bi-send"></i> Send to Steadfast';
+                        $(button).prop('disabled', false).html('<i class="bi bi-send-fill"></i> Send to Steadfast');
                     }
                 },
-                error: function(xhr) {
-                    showToast('Error', 'Failed to send order. Please try again.', 'danger');
-                    button.disabled = false;
-                    button.innerHTML = '<i class="bi bi-send"></i> Send to Steadfast';
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', {
+                        status: status,
+                        error: error,
+                        response: xhr.responseText
+                    });
+
+                    let errorMsg = 'Failed to send order. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    } else if (xhr.responseText) {
+                        errorMsg = 'Server Error: ' + xhr.responseText.substring(0, 100);
+                    }
+
+                    showToast('Error', errorMsg, 'danger');
+                    $(button).prop('disabled', false).html('<i class="bi bi-send-fill"></i> Send to Steadfast');
                 }
             });
         }
 
+        // Bulk send to Steadfast (CORRECTED VERSION)
+        function bulkSendToSteadfast() {
+            if (selectedOrders.length === 0) {
+                showToast('Warning', 'Please select at least one order', 'warning');
+                return;
+            }
+
+            if (!confirm(`⚠️ Send ${selectedOrders.length} order(s) to Steadfast?\n\nThis will submit all selected pending orders.\n\nMake sure all order details are correct!`)) {
+                return;
+            }
+
+            // Disable bulk actions
+            $('#bulkActionsBar button').prop('disabled', true);
+
+            showToast('Processing', `Sending ${selectedOrders.length} order(s) to Steadfast...`, 'info');
+
+            // Process orders one by one
+            let successCount = 0;
+            let failCount = 0;
+            let processed = 0;
+
+            selectedOrders.forEach(function(orderId) {
+                const form = $(`.steadfast-form[data-order-id="${orderId}"]`);
+
+                const requestData = {
+                    invoice: form.find('[name="invoice"]').val(),
+                    recipient_name: form.find('[name="recipient_name"]').val(),
+                    recipient_phone: form.find('[name="recipient_phone"]').val(),
+                    recipient_address: form.find('[name="recipient_address"]').val(),
+                    cod_amount: parseFloat(form.find('[name="cod_amount"]').val()),
+                    note: form.find('[name="note"]').val() || null,
+                    alternative_phone: form.find('[name="alternative_phone"]').val() || null,
+                    recipient_email: form.find('[name="recipient_email"]').val() || null,
+                    item_description: form.find('[name="item_description"]').val() || null,
+                    total_lot: form.find('[name="total_lot"]').val() ? parseInt(form.find('[name="total_lot"]').val()) : null,
+                    delivery_type: parseInt(form.find('[name="delivery_type"]').val())
+                };
+
+                $.ajax({
+                    url: '@Url.Action("SendToSteadfast", "Orders")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        orderId: orderId,
+                        request: requestData
+                    }),
+                    success: function(response) {
+                        processed++;
+                        if (response.success) {
+                            successCount++;
+                            // Clear localStorage for this order
+                            clearOrderStorage(orderId);
+                        } else {
+                            failCount++;
+                        }
+
+                        if (processed === selectedOrders.length) {
+                            finalizeBulkSend(successCount, failCount);
+                        }
+                    },
+                    error: function() {
+                        processed++;
+                        failCount++;
+
+                        if (processed === selectedOrders.length) {
+                            finalizeBulkSend(successCount, failCount);
+                        }
+                    }
+                });
+            });
+        }
+        
+        function finalizeBulkSend(successCount, failCount) {
+            let message = `✅ Successfully sent: ${successCount}<br>`;
+            if (failCount > 0) {
+                message += `❌ Failed: ${failCount}`;
+            }
+            
+            showToast('Bulk Send Complete', message, successCount > 0 ? 'success' : 'danger');
+            
+            setTimeout(function() {
+                location.reload();
+            }, 3000);
+        }
+        
         // Check Steadfast status
         function checkStatus(trackingCode, orderId) {
+            showToast('Checking', 'Fetching latest status from Steadfast...', 'info');
+            
             $.ajax({
                 url: '@Url.Action("CheckSteadfastStatus", "Orders")',
                 type: 'GET',
                 data: { trackingCode: trackingCode },
                 success: function(response) {
                     if (response.success) {
-                        showToast('Status Updated', `Current Status: ${response.status}`, 'info');
+                        showToast('Status Updated', `Current Status: <strong>${response.status}</strong>`, 'info');
                     } else {
                         showToast('Error', response.message, 'danger');
                     }
+                },
+                error: function() {
+                    showToast('Error', 'Failed to check status', 'danger');
                 }
             });
         }
 
-        // Toast notification
+        // Toast notification function (continued)
         function showToast(title, message, type) {
+            const bgColor = type === 'success' ? 'bg-success' :
+                           type === 'danger' ? 'bg-danger' :
+                           type === 'warning' ? 'bg-warning' :
+                           type === 'info' ? 'bg-info' : 'bg-secondary';
+
             const toastHtml = `
-                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                <div class="toast align-items-center text-white ${bgColor} border-0"
+                     role="alert"
+                     style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 350px; max-width: 500px;">
                     <div class="d-flex">
                         <div class="toast-body">
-                            <strong>${title}:</strong> ${message}
+                            <strong><i class="bi bi-bell"></i> ${title}:</strong><br>
+                            ${message}
                         </div>
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                     </div>
@@ -388,12 +743,74 @@
             `;
 
             const toastElement = $(toastHtml).appendTo('body');
-            const toast = new bootstrap.Toast(toastElement[0], { delay: 5000 });
+            const toast = new bootstrap.Toast(toastElement[0], {
+                delay: type === 'success' ? 5000 : 8000
+            });
             toast.show();
 
             toastElement.on('hidden.bs.toast', function() {
                 $(this).remove();
             });
+        }
+
+        // Keyboard shortcuts
+        $(document).keydown(function(e) {
+            // Ctrl/Cmd + A to select all
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !$(e.target).is('input, textarea')) {
+                e.preventDefault();
+                selectAll();
+            }
+
+            // Escape to clear selection
+            if (e.key === 'Escape') {
+                clearSelection();
+            }
+        });
+
+        // Auto-save form data to localStorage (optional feature)
+        $('.editable-field').on('change', function() {
+            const form = $(this).closest('form');
+            const orderId = form.data('order-id');
+            const fieldName = $(this).attr('name');
+            const fieldValue = $(this).val();
+
+            // Save to localStorage
+            const storageKey = `order_${orderId}_${fieldName}`;
+            localStorage.setItem(storageKey, fieldValue);
+
+            // Show saved indicator
+            $(this).addClass('border-success');
+            setTimeout(() => {
+                $(this).removeClass('border-success');
+            }, 1000);
+        });
+
+        // Load saved data from localStorage on page load
+        $('.steadfast-form').each(function() {
+            const orderId = $(this).data('order-id');
+            const form = $(this);
+
+            form.find('.editable-field').each(function() {
+                const fieldName = $(this).attr('name');
+                const storageKey = `order_${orderId}_${fieldName}`;
+                const savedValue = localStorage.getItem(storageKey);
+
+                if (savedValue && !$(this).prop('readonly')) {
+                    $(this).val(savedValue);
+                }
+            });
+        });
+
+        // Clear localStorage after successful send
+        function clearOrderStorage(orderId) {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(`order_${orderId}_`)) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
         }
     </script>
 }
